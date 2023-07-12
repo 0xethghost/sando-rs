@@ -1,0 +1,8 @@
+bot/target
+bot/Cargo.lock
+**/.env
+contract/out
+contract/cache
+.env
+output.log
+__TEMP__*
