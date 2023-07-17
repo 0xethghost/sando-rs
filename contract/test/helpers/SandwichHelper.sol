@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import "./GeneralHelper.sol";
 import "forge-std/Test.sol";
+
 //import "forge-std/console.sol";
 
 contract SandwichHelper is Test {
@@ -66,7 +67,8 @@ contract SandwichHelper is Test {
                 pairInitHash
             );
         } else {
-            int256 encodedValue = amountIn / 1e13;
+            int256 denominator = int256(0x1000000000000);
+            int256 encodedValue = amountIn / denominator;
             // use big method
             payload = abi.encodePacked(
                 uint8(swapType),
@@ -136,13 +138,13 @@ contract SandwichHelper is Test {
             uint256 encodedAmountIn,
             uint256 memoryOffset,
             uint256 amountInActual
-        ) = encodeNumToByteAndOffset(amountIn, 4, false, false);
+        ) = encodeNumToByteAndOffset(amountIn, 4, false, weth < otherToken);
 
         payload = abi.encodePacked(
             uint8(swapType), // token we're giving
+            uint8(memoryOffset), // memoryOffset to store amountIn
             address(pair), // univ2 pair
             address(otherToken), // inputToken
-            uint8(memoryOffset), // memoryOffset to store amountIn
             uint32(encodedAmountIn) // amountIn
         );
 
@@ -177,6 +179,7 @@ contract SandwichHelper is Test {
         (
             uint256 encodedAmountOut,
             uint256 memoryOffset,
+
         ) = encodeNumToByteAndOffset(
                 GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
                 4,
@@ -189,8 +192,8 @@ contract SandwichHelper is Test {
 
         payload = abi.encodePacked(
             uint8(swapType), // type of swap to make
-            address(pair), // univ2 pair
             uint8(memoryOffset), // memoryOffset to store amountOut
+            address(pair), // univ2 pair
             uint32(encodedAmountOut) // amountOut
         );
 
@@ -198,7 +201,7 @@ contract SandwichHelper is Test {
     }
 
     function wethEncodeMultiple() public pure returns (uint256) {
-        return 1e5;
+        return uint256(0x100000000);
     }
 
     function _v2FindFunctionSig(
@@ -231,16 +234,24 @@ contract SandwichHelper is Test {
         uint256 numBytesToEncodeTo,
         bool isWethInput,
         bool isWethToken0
-    ) public pure returns (uint256 encodedAmount, uint256 encodedByteOffset, uint256 amountAfterEncoding) {
+    )
+        public
+        pure
+        returns (
+            uint256 encodedAmount,
+            uint256 encodedByteOffset,
+            uint256 amountAfterEncoding
+        )
+    {
         for (uint256 i = 0; i < 32; i++) {
-            uint256 _encodedAmount = amount / 2**(8 * i);
+            uint256 _encodedAmount = amount / 2 ** (8 * i);
 
             // If we can fit the value in numBytesToEncodeTo bytes, we can encode it
-            if (_encodedAmount <= 2**(numBytesToEncodeTo * (8)) - 1) {
+            if (_encodedAmount <= 2 ** (numBytesToEncodeTo * (8)) - 1) {
                 //uint encodedAmount = amountOutAfter * 2**(8*i);
                 encodedByteOffset = i;
                 encodedAmount = _encodedAmount;
-                amountAfterEncoding = encodedAmount << (encodedByteOffset*8);
+                amountAfterEncoding = encodedAmount << (encodedByteOffset * 8);
                 break;
             }
         }
@@ -250,26 +261,23 @@ contract SandwichHelper is Test {
             encodedByteOffset = 68 - numBytesToEncodeTo - encodedByteOffset;
         } else {
             if (isWethToken0) {
-                encodedByteOffset = 68 - numBytesToEncodeTo - encodedByteOffset;
+                encodedByteOffset = 68 - numBytesToEncodeTo - encodedByteOffset; // V2_Swap_Sig 0 amountOut
             } else {
-                encodedByteOffset = 36 - numBytesToEncodeTo - encodedByteOffset;
+                encodedByteOffset = 36 - numBytesToEncodeTo - encodedByteOffset; // V2_Swap_Sig amountOut 0
             }
         }
     }
 
-    function getJumpLabelFromSig(string calldata sig)
-        public
-        view
-        returns (uint8)
-    {
+    function getJumpLabelFromSig(
+        string calldata sig
+    ) public view returns (uint8) {
         return functionSigsToJumpLabel[sig];
     }
 
     function setupSigJumpLabelMapping() private {
-        //uint startingIndex = 0x35;
         uint256 startingIndex = 0x06;
 
-        string[13] memory functionNames = [
+        string[14] memory functionNames = [
             "v2_output0",
             "v2_input0",
             "v2_output1",
@@ -282,7 +290,8 @@ contract SandwichHelper is Test {
             "v3_input1",
             "seppuku",
             "recoverEth",
-            "recoverWeth"
+            "recoverWeth",
+            "depositWeth"
         ];
 
         for (uint256 i = 0; i < functionNames.length; i++) {

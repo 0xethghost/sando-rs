@@ -47,5 +47,5 @@ impl SandwichMaker {
 
 /// Return the divisor used for encoding call value (weth amount)
 pub fn get_weth_encode_divisor() -> U256 {
-    U256::from("0x100000000")
+    U256::from("4294967296")
 }

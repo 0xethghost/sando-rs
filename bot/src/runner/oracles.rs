@@ -45,7 +45,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>) {
                     log::info!(
                     "{}",
                     format!(
-                        "New Block: (number:{:?}, timestamp:{:?}, basefee:{:?}), Next Block: (number:{:?}, timestamp:{:?}, basefee:{:?})",
+                        "New Block: (number: {:?}, timestamp: {:?}, basefee: {:?}), Next Block: (number: {:?}, timestamp: {:?}, basefee: {:?})",
                         latest_block.number, latest_block.timestamp, latest_block.base_fee, next_block.number, next_block.timestamp, next_block.base_fee
                     )
                     .bright_purple()

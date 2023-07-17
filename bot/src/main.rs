@@ -108,11 +108,11 @@ async fn main() -> Result<()> {
     ));
 
     //// Add UniswapV3 pools
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x1F98431c8aD98523631AE4a59f267346ea31F984").unwrap(),
-    //     PoolVariant::UniswapV3,
-    //     12369621,
-    // ));
+    dexes.push(Dex::new(
+        H160::from_str("0x1F98431c8aD98523631AE4a59f267346ea31F984").unwrap(),
+        PoolVariant::UniswapV3,
+        12369621,
+    ));
 
     let current_block = client.get_block_number().await.unwrap();
     let all_pools = sync_dex(dexes.clone(), &client, current_block, None)

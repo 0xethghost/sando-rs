@@ -115,6 +115,10 @@ impl Bot {
                 let read_lock = self.sandwich_state.weth_balance.read().await;
                 (*read_lock).clone()
             };
+            log::info!(
+                "{}",
+                format!("{:?} sandwich balance", sandwich_balance).green()
+            );
             // ignore txs that we can't include in next block
             // enhancement: simulate all txs, store result, and use result when tx can included
             if victim_tx.max_fee_per_gas.unwrap_or(U256::zero()) < block_oracle.next_block.base_fee

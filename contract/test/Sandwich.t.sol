@@ -1,35 +1,26 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.15;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "foundry-huff/HuffDeployer.sol";
-import "v3-core/interfaces/IUniswapV3Pool.sol";
-
-import {IWETH} from "./interfaces/IWETH.sol";
-import "./interfaces/IERC20.sol";
 import "./helpers/GeneralHelper.sol";
 import "./helpers/SandwichHelper.sol";
+import {IWETH} from "./interfaces/IWETH.sol";
+import "./interfaces/IERC20.sol";
+import "v3-core/interfaces/IUniswapV3Pool.sol";
 
-// Need custom interface cause USDT does not return a bool after swap
-// see more here: https://github.com/d-xo/weird-erc20#missing-return-values
-interface IUSDT {
-    function transfer(address to, uint256 value) external;
-}
-
-contract ModSandwichV4 is Test {
+contract SandwichTest is Test {
     address binance8 = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
-    address keeperdao = 0x9a67F1940164d0318612b497E8e6038f902a00a4;
 
     // serachers
     address constant admin = 0x6E5F4552091a69125D5DfCB7B8c2659029395Bdf;
     address constant helper = 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF;
 
+    address sandwich;
+    SandwichHelper sandwichHelper;
     IWETH weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 wethFundAmount = 1000000000 ether;
-    address sandwich;
-
-    SandwichHelper sandwichHelper;
 
     function setUp() public {
         sandwichHelper = new SandwichHelper();
@@ -39,22 +30,327 @@ contract ModSandwichV4 is Test {
         weth.deposit{value: wethFundAmount}();
         weth.transfer(sandwich, wethFundAmount);
 
-        // apparently if you want to prank addy they need to pay for gas
-        // hours wasted on this :<
+        // charge for gas fee
         payable(admin).transfer(100 ether);
         payable(helper).transfer(100 ether);
     }
 
-    function testBreakUniswapV3Callback() public {
-        vm.startPrank(address(0x69696969));
+    function testV2Weth0Input() public {
+        address outputToken = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // Tether
+        uint256 amountIn = 1.94212341234123424 ether;
 
-        bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
+        // Pre swap checks
+        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
+        uint256 usdtBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
+
+        uint256 actualAmountIn = (amountIn /
+            sandwichHelper.wethEncodeMultiple()) *
+            sandwichHelper.wethEncodeMultiple();
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+            address(weth),
+            outputToken,
+            actualAmountIn
+        );
+        (, , uint256 expectedAmountOut) = sandwichHelper
+            .encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
+
+        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+            .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
+        emit log_bytes(payloadV4);
+        emit log_uint(encodedValue);
+        vm.startPrank(admin);
+        uint checkpointGasLeft = gasleft();
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        uint checkpointGasLeft1 = gasleft();
+        console.log(
+            "testV2WethInput0 gas used:",
+            checkpointGasLeft - checkpointGasLeft1
+        );
+        assertTrue(s);
+        vm.stopPrank();
+
+        // Check values after swap
+        uint256 wethBalanceChange = wethBalanceBefore -
+            weth.balanceOf(sandwich);
+        uint256 usdtBalanceChange = IERC20(outputToken).balanceOf(sandwich) -
+            usdtBalanceBefore;
+
+        assertEq(
+            usdtBalanceChange,
+            expectedAmountOut,
+            "did not get expected usdt amount out from swap"
+        );
+        assertEq(
+            wethBalanceChange,
+            actualAmountIn,
+            "unexpected amount of weth used in swap"
+        );
+    }
+
+    function testV2Weth1Input() public {
+        address outputToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
+        uint256 amountIn = 0.942 ether;
+
+        // Pre swap checks
+        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
+        uint256 usdcBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
+
+        uint256 actualAmountIn = (amountIn /
+            sandwichHelper.wethEncodeMultiple()) *
+            sandwichHelper.wethEncodeMultiple();
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+            address(weth),
+            outputToken,
+            actualAmountIn
+        );
+        (, , uint256 expectedAmountOut) = sandwichHelper
+            .encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
+
+        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+            .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
+        vm.startPrank(admin);
+        uint checkpointGasLeft = gasleft();
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        uint checkpointGasLeft1 = gasleft();
+        console.log(
+            "testV2WethInput1 gas used:",
+            checkpointGasLeft - checkpointGasLeft1
+        );
+        assertTrue(s);
+        vm.stopPrank();
+
+        // Check values after swap
+        uint256 wethBalanceChange = wethBalanceBefore -
+            weth.balanceOf(sandwich);
+        uint256 usdcBalanceChange = IERC20(outputToken).balanceOf(sandwich) -
+            usdcBalanceBefore;
+
+        assertEq(
+            usdcBalanceChange,
+            expectedAmountOut,
+            "did not get expected usdc amount out from swap"
+        );
+        assertEq(
+            wethBalanceChange,
+            actualAmountIn,
+            "unexpected amount of weth used in swap"
+        );
+    }
+
+    function testV2Weth0Output() public {
+        address inputToken = 0xe53EC727dbDEB9E2d5456c3be40cFF031AB40A55; // superfarm
+        uint256 amountIn = 1000000 * 10 ** 18;
+
+        // Fund sandwich
+        vm.prank(binance8);
+        IERC20(inputToken).transfer(sandwich, amountIn);
+
+        // Pre swap checks
+        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
+        uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
+
+        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(
+            superFarmBalanceBefore,
+            4,
+            false,
+            true
+        );
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+            inputToken,
+            address(weth),
+            actualAmountIn
+        );
+        uint256 expectedAmountOut = (amountOutFromEncoded /
+            sandwichHelper.wethEncodeMultiple()) *
+            sandwichHelper.wethEncodeMultiple();
+
+        // Perform swap
+        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+            .v2CreateSandwichPayloadWethIsOutput(inputToken, amountIn);
+        emit log_bytes(payloadV4);
+        emit log_uint(encodedValue);
+        vm.startPrank(admin);
+        uint checkpointGasLeft = gasleft();
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        uint checkpointGasLeft1 = gasleft();
+        console.log(
+            "testV2WethOutput0 gas used:",
+            checkpointGasLeft - checkpointGasLeft1
+        );
+        assertTrue(s, "swap failed");
+        vm.stopPrank();
+
+        // Check values after swap
+        uint256 wethBalanceChange = weth.balanceOf(sandwich) -
+            wethBalanceBefore;
+        uint256 superFarmBalanceChange = superFarmBalanceBefore -
+            IERC20(inputToken).balanceOf(sandwich);
+
+        assertEq(
+            wethBalanceChange,
+            expectedAmountOut,
+            "did not get expected weth amount out from swap"
+        );
+        assertEq(
+            superFarmBalanceChange,
+            actualAmountIn,
+            "unexpected amount of superFarm used in swap"
+        );
+    }
+
+    function testV2Weth1Output() public {
+        address inputToken = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // Dai
+        uint256 amountIn = 4722.366481770134 ether; // encoded as 0xFFFFFFFF0000000000
+
+        console.log("amountIn:", amountIn);
+
+        // Fund sandwich
+        vm.prank(0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8);
+        IERC20(inputToken).transfer(sandwich, amountIn);
+
+        // Pre swap checks
+        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
+        uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
+
+        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(
+            daiBalanceBefore,
+            4,
+            false,
+            false
+        );
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+            inputToken,
+            address(weth),
+            actualAmountIn
+        );
+        uint256 expectedAmountOut = (amountOutFromEncoded /
+            sandwichHelper.wethEncodeMultiple()) *
+            sandwichHelper.wethEncodeMultiple();
+
+        // Perform swap
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+            .v2CreateSandwichPayloadWethIsOutput(inputToken, amountIn);
+        emit log_bytes(payload);
+        emit log_uint(encodedValue);
+        emit log_uint(amountOutFromEncoded);
+        vm.startPrank(admin);
+        uint checkpointGasLeft = gasleft();
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
+        uint checkpointGasLeft1 = gasleft();
+        console.log(
+            "testV2WethOutput1 gas used:",
+            checkpointGasLeft - checkpointGasLeft1
+        );
+        assertTrue(s, "swap failed");
+        vm.stopPrank();
+
+        // Check values after swap
+        uint256 wethBalanceChange = weth.balanceOf(sandwich) -
+            wethBalanceBefore;
+        uint256 daiBalanceChange = daiBalanceBefore -
+            IERC20(inputToken).balanceOf(sandwich);
+
+        assertEq(
+            wethBalanceChange,
+            expectedAmountOut,
+            "did not get expected weth amount out from swap"
+        );
+        assertEq(
+            daiBalanceChange,
+            actualAmountIn,
+            "unexpected amount of dai used in swap"
+        );
+    }
+
+    // Test by recovering the initial funded amount
+    function testRecoverWeth() public {
+        vm.startPrank(helper);
+
+        uint256 sandwichBalanceBefore = weth.balanceOf(sandwich);
+        uint256 helperBalanceBefore = weth.balanceOf(helper);
+
+        string memory functionName = "recoverWeth";
+        bytes memory payload = abi.encodePacked(
+            sandwichHelper.getJumpLabelFromSig(functionName),
+            sandwichBalanceBefore
+        );
         (bool s, ) = sandwich.call(payload);
-        assertFalse(s, "only pools should be able to call callback");
+        assertTrue(s, "calling recoverWeth failed");
+
+        uint256 sandwichBalanceAfter = weth.balanceOf(sandwich);
+        uint256 helperBalanceAfter = weth.balanceOf(helper);
+
+        // check balance change
+        assertTrue(
+            sandwichBalanceAfter == 0,
+            "sandwich weth balance should be zero"
+        );
+        assertTrue(
+            helperBalanceAfter == helperBalanceBefore + sandwichBalanceBefore,
+            "searcher should gain all weth from sandwich"
+        );
+    }
+
+    function testRecoverEth() public {
+        vm.startPrank(helper);
+
+        uint256 sandwichBalanceBefore = address(sandwich).balance;
+        uint256 helperBalanceBefore = address(helper).balance;
+
+        string memory functionName = "recoverEth";
+        emit log_bytes(
+            abi.encodePacked(sandwichHelper.getJumpLabelFromSig(functionName))
+        );
+        bytes memory payload = abi.encodePacked(
+            sandwichHelper.getJumpLabelFromSig(functionName)
+        );
+        (bool s, ) = sandwich.call(payload);
+        assertTrue(s, "calling recoverEth failed");
+
+        uint256 sandwichBalanceAfter = address(sandwich).balance;
+        uint256 helperBalanceAfter = address(helper).balance;
+
+        // check balance change
+        assertTrue(
+            sandwichBalanceAfter == 0,
+            "sandwich eth balance should be zero"
+        );
+        assertTrue(
+            helperBalanceAfter == helperBalanceBefore + sandwichBalanceBefore,
+            "searcher should gain all eth from sandwich"
+        );
+    }
+
+    function testDepositWeth() public {
+        vm.startPrank(helper);
+        uint256 helperBalanceBefore = address(helper).balance;
+        uint sandwichWethBalanceBefore = weth.balanceOf(sandwich);
+        console.log(sandwichWethBalanceBefore);
+        uint amountDeposit = 0.1 ether;
+        string memory functionName = "depositWeth";
+        emit log_bytes(
+            abi.encodePacked(sandwichHelper.getJumpLabelFromSig(functionName))
+        );
+        bytes memory payload = abi.encodePacked(
+            sandwichHelper.getJumpLabelFromSig(functionName)
+        );
+        (bool s, ) = sandwich.call{value: amountDeposit}(payload);
+        vm.stopPrank();
+        assertTrue(s, "calling depositWeth failed");
+        uint256 helperBalanceAfter = address(helper).balance;
+        uint sandwichWethBalanceAfter = weth.balanceOf(sandwich);
+        console.log(sandwichWethBalanceAfter);
+        assertEq(helperBalanceBefore - helperBalanceAfter, amountDeposit);
+        assertEq(
+            sandwichWethBalanceAfter - sandwichWethBalanceBefore,
+            amountDeposit
+        );
     }
 
     // helper
-    function _getV3PoolInfo(address _pool) internal view returns (address token0, address token1, uint24 fee) {
+    function _getV3PoolInfo(
+        address _pool
+    ) internal view returns (address token0, address token1, uint24 fee) {
         IUniswapV3Pool pool = IUniswapV3Pool(_pool);
         token0 = pool.token0();
         token1 = pool.token1();
@@ -98,6 +394,8 @@ contract ModSandwichV4 is Test {
                 fee,
                 amountIn
             );
+        emit log_bytes(payload);
+        emit log_uint(encodedValue);
 
         vm.prank(admin, admin);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
@@ -113,8 +411,8 @@ contract ModSandwichV4 is Test {
         (address inputToken, address outputToken) = (token1, token0);
 
         // fund sandwich contract
-        vm.startPrank(keeperdao);
-        IUSDT(inputToken).transfer(sandwich, uint256(amountIn));
+        vm.startPrank(0x56556075Ab3e2Bb83984E90C52850AFd38F20883);
+        IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
         bytes memory payload = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
@@ -138,8 +436,8 @@ contract ModSandwichV4 is Test {
         int256 amountIn = 100000 ether; // 100000 btt
 
         // fund sandwich contract
-        vm.startPrank(0x222DAADE4219e5D1BE1efdF24326d7482B8A3A9b);
-        IUSDT(inputToken).transfer(sandwich, uint256(amountIn));
+        vm.startPrank(0xD249942f6d417CbfdcB792B1229353B66c790726);
+        IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
         bytes memory payload = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
@@ -163,7 +461,7 @@ contract ModSandwichV4 is Test {
         int256 amountIn = 1e6; // 100 usdc
 
         // fund sandwich contract
-        vm.prank(binance8);
+        vm.startPrank(binance8);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
         bytes memory payload = sandwichHelper
@@ -202,7 +500,15 @@ contract ModSandwichV4 is Test {
         changePrank(admin, admin);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "calling swap failed");
-   }
+    }
+
+    function testBreakUniswapV3Callback() public {
+        vm.startPrank(address(0x69696969));
+
+        bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
+        (bool s, ) = sandwich.call(payload);
+        assertFalse(s, "only pools should be able to call callback");
+    }
 
     function testUnauthorized() public {
         vm.startPrank(address(0xf337babe));
@@ -214,10 +520,7 @@ contract ModSandwichV4 is Test {
         );
         (bool s, ) = sandwich.call(payload);
 
-        assertFalse(
-            s,
-            "unauthorized addresses should not call recover eth"
-        );
+        assertFalse(s, "unauthorized addresses should not call recover eth");
 
         functionName = "recoverWeth";
         payload = abi.encodePacked(
@@ -243,191 +546,5 @@ contract ModSandwichV4 is Test {
         changePrank(helper);
         (s, ) = sandwich.call(payload);
         assertTrue(s, "calling recoverEth from helper failed");
-    }
-
-    function testSepukku() public {
-        vm.startPrank(helper);
-
-        string memory functionName = "seppuku";
-        bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
-        );
-        (bool s, ) = sandwich.call(payload);
-        assertTrue(s, "calling seppuku failed");
-    }
-
-    function testRecoverEth() public {
-        vm.startPrank(helper);
-
-        uint256 sandwichBalanceBefore = address(sandwich).balance;
-        uint256 searcherBalanceBefore = address(helper).balance;
-
-        string memory functionName = "recoverEth";
-        emit log_bytes(
-            abi.encodePacked(sandwichHelper.getJumpLabelFromSig(functionName))
-        );
-        bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
-        );
-        (bool s, ) = sandwich.call(payload);
-        assertTrue(s, "calling recoverEth failed");
-
-        uint256 sandwichBalanceAfter = address(sandwich).balance;
-        uint256 searcherBalanceAfter = address(helper).balance;
-
-        // check balance change
-        assertTrue(
-            sandwichBalanceAfter == 0,
-            "sandwich eth balance should be zero"
-        );
-        assertTrue(
-            searcherBalanceAfter ==
-                searcherBalanceBefore + sandwichBalanceBefore,
-            "searcher should gain all eth from sandwich"
-        );
-    }
-
-    // Test by recovering the initial funded amount
-    function testRecoverWeth() public {
-        vm.startPrank(helper);
-
-        uint256 sandwichBalanceBefore = weth.balanceOf(sandwich);
-        uint256 searcherBalanceBefore = weth.balanceOf(helper);
-
-        string memory functionName = "recoverWeth";
-        bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName),
-            sandwichBalanceBefore
-        );
-        (bool s, ) = sandwich.call(payload);
-        assertTrue(s, "calling recoverWeth failed");
-
-        uint256 sandwichBalanceAfter = weth.balanceOf(sandwich);
-        uint256 searcherBalanceAfter = weth.balanceOf(helper);
-
-        // check balance change
-        assertTrue(sandwichBalanceAfter == 0, "sandwich weth balance should be zero");
-        assertTrue(searcherBalanceAfter == searcherBalanceBefore + sandwichBalanceBefore, "searcher should gain all weth from sandwich");
-    }
-
-    // +-------------------------------+
-    // |        Generic Tests          |
-    // +-------------------------------+
-    // could add fuzzing / testing to test values at limits/boundary
-
-    function testV2Weth0Input() public {
-        address outputToken = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // Tether
-        uint256 amountIn = 1.94212341234123424 ether;
-
-        // Pre swap checks
-        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
-        uint256 usdtBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
-
-        uint256 actualAmountIn = (amountIn / sandwichHelper.wethEncodeMultiple()) * sandwichHelper.wethEncodeMultiple();
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(address(weth), outputToken, actualAmountIn);
-        (,,uint256 expectedAmountOut) = sandwichHelper.encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
-
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper.v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
-        vm.prank(admin);
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
-        assertTrue(s);
-
-        // Check values after swap
-        uint256 wethBalanceChange = wethBalanceBefore - weth.balanceOf(sandwich) ;
-        uint256 usdtBalanceChange = IERC20(outputToken).balanceOf(sandwich) - usdtBalanceBefore;
-
-        assertEq(usdtBalanceChange, expectedAmountOut, "did not get expected usdt amount out from swap");
-        assertEq(wethBalanceChange, actualAmountIn, "unexpected amount of weth used in swap");
-    }
-
-    function testV2Weth1Input() public {
-        address outputToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
-        uint256 amountIn = 0.942 ether;
-
-        // Pre swap checks
-        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
-        uint256 usdcBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
-
-        uint256 actualAmountIn = (amountIn / sandwichHelper.wethEncodeMultiple()) * sandwichHelper.wethEncodeMultiple();
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(address(weth), outputToken, actualAmountIn);
-        (,,uint256 expectedAmountOut) = sandwichHelper.encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
-
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper.v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
-        vm.prank(admin);
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
-        assertTrue(s);
-
-        // Check values after swap
-        uint256 wethBalanceChange = wethBalanceBefore - weth.balanceOf(sandwich) ;
-        uint256 usdcBalanceChange = IERC20(outputToken).balanceOf(sandwich) - usdcBalanceBefore;
-
-        assertEq(usdcBalanceChange, expectedAmountOut, "did not get expected usdc amount out from swap");
-        assertEq(wethBalanceChange, actualAmountIn, "unexpected amount of weth used in swap");
-    }
-
-    function testV2Weth0Output() public {
-        address inputToken = 0xe53EC727dbDEB9E2d5456c3be40cFF031AB40A55; // superfarm
-        uint256 amountIn = 1000000 * 10 **18;
-
-        // Fund sandwich
-        vm.prank(binance8);
-        IUSDT(inputToken).transfer(sandwich, amountIn);
-
-        // Pre swap checks
-        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
-        uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
-
-        (,,uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(superFarmBalanceBefore, 4, false, true);
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(inputToken, address(weth), actualAmountIn);
-        uint256 expectedAmountOut = (amountOutFromEncoded / sandwichHelper.wethEncodeMultiple()) * sandwichHelper.wethEncodeMultiple();
-
-        // Perform swap
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
-            .v2CreateSandwichPayloadWethIsOutput(inputToken, amountIn);
-        emit log_bytes(payloadV4);
-        vm.prank(admin);
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
-        assertTrue(s, "swap failed");
-
-        // Check values after swap
-        uint256 wethBalanceChange = weth.balanceOf(sandwich) - wethBalanceBefore;
-        uint256 superFarmBalanceChange = superFarmBalanceBefore - IERC20(inputToken).balanceOf(sandwich);
-
-        assertEq(wethBalanceChange, expectedAmountOut, "did not get expected weth amount out from swap");
-        assertEq(superFarmBalanceChange, actualAmountIn, "unexpected amount of superFarm used in swap");
-    }
-
-    function testV2Weth1Output() public {
-        address inputToken = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // Dai
-        uint256 amountIn = 4722.366481770134 ether; // encoded as 0xFFFFFFFF0000000000
-
-        console.log("amountIn:", amountIn);
-
-        // Fund sandwich
-        vm.prank(binance8);
-        IERC20(inputToken).transfer(sandwich, amountIn);
-
-        // Pre swap checks
-        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
-        uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
-
-        (,,uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(daiBalanceBefore, 4, false, false);
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(inputToken, address(weth), actualAmountIn);
-        uint256 expectedAmountOut = (amountOutFromEncoded / sandwichHelper.wethEncodeMultiple()) * sandwichHelper.wethEncodeMultiple();
-
-        // Perform swap
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
-            .v2CreateSandwichPayloadWethIsOutput(inputToken, amountIn);
-        emit log_bytes(payload);
-        vm.prank(admin);
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
-        assertTrue(s, "swap failed");
-
-        // Check values after swap
-        uint256 wethBalanceChange = weth.balanceOf(sandwich) - wethBalanceBefore;
-        uint256 daiBalanceChange = daiBalanceBefore - IERC20(inputToken).balanceOf(sandwich);
-
-        assertEq(wethBalanceChange, expectedAmountOut, "did not get expected weth amount out from swap");
-        assertEq(daiBalanceChange, actualAmountIn, "unexpected amount of dai used in swap");
     }
 }

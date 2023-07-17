@@ -81,7 +81,14 @@ impl SandwichLogicV2 {
         ]);
 
         let encoded_call_value = amount_in / get_weth_encode_divisor();
-
+        log::info!(
+            "{}",
+            format!("[payload] {:?}", payload)
+        );
+        log::info!(
+            "{}",
+            format!("[Encoded call value] {:?}", encoded_call_value)
+        );
         (payload, encoded_call_value)
     }
 
