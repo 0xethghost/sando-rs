@@ -81,17 +81,17 @@ All calldata is encoded by packing the values together.
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
-| 20 | PairAddress  |
 | 1 | Where to store AmountOut  |
+| 20 | PairAddress  |
 | 4 | AmountOut  |
 
 #### When Weth is output (0x06, 0x10)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
+| 1 | Where to store AmountIn  |
 | 20 | PairAddress  |
 | 20 | TokenInAddress  |
-| 1 | Where to store AmountIn  |
 | 4 | AmountIn  |
 
 ### Uniswap V3 Calldata Encoding Format
