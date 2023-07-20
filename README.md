@@ -19,9 +19,9 @@ Anytime that a transaction interacts with a Uniswap V2/V3 pool and their forks, 
 - **Salmonella Checks**: Detect if tx uses unusual opcodes that may produce different mainnet results.
 - **Discord Logging**: Send notifications via discord webhooks.
 
-**Bot Logic Breakdown** can be found under [bot/README.md](https://github.com/mouseless-eth/rusty-sando/tree/master/bot)
+**Bot Logic Breakdown** can be found under [bot/README.md](https://github.com/sipovalovdmitro/rusty-sando/tree/main/bot)
 
-**Contract Logic Breakdown** can be found under [contract/README.md](https://github.com/mouseless-eth/rusty-sando/tree/master/contract)
+**Contract Logic Breakdown** can be found under [contract/README.md](https://github.com/sipovalovdmitro/rusty-sando/tree/main/contract)
 
 ## Notice
 If any bugs or optimizations are found, feel free to create a pull request. **All pull requests are welcome!** 
