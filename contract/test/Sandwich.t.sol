@@ -14,8 +14,8 @@ contract SandwichTest is Test {
     address binance8 = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
 
     // serachers
-    address constant admin = 0x6E5F4552091a69125D5DfCB7B8c2659029395Bdf;
-    address constant helper = 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF;
+    address constant admin = 0xfD22Ef4073d379cCa47c3c15AdFb1d3363967257;
+    address constant helper = 0x0F91479f971bd0B98629311B6c9052b8363bc9A5;
 
     address sandwich;
     SandwichHelper sandwichHelper;
