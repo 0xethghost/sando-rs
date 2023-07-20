@@ -407,7 +407,7 @@
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
         returndatasize                              // [argoffset, argsize, retoffset, retsize]
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
-        0x01 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
+        chainid calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
         [V3_SWAP_SIG] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
@@ -441,13 +441,13 @@
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
         returndatasize                              // [argoffset, argsize, retoffset, retsize]
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
-        0x01 calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
+        chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
         [V3_SWAP_SIG] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         callvalue 0x40 mstore          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, callvalue * 100000)
-        0x01 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
+        chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
         0xa0 0x84 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(132, 0x80) *dynamic byte offset
@@ -517,7 +517,7 @@
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
         [V3_SWAP_SIG] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
-        0x01 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
+        chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
         0x29 calldataload 0xd0 shr 0x44 mstore      // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
@@ -554,7 +554,7 @@
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         0x29 calldataload 0xb8 shr                  // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         0x3e mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, amount_in_raw * 10000000000000)
-        0x01 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
+        chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
         0xa0 0x84 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(132, 0x80) *dynamic byte offset

@@ -129,5 +129,12 @@ All calldata is encoded by packing the values together.
 ```console
 forge test --rpc-url <your-rpc-url-here>
 ```
+
+## Deployment
+```console
+source .env  
+forge script ./script/Deploy.s.sol --rpc-url $MAINNET_HTTP_PROVIDER_URL --broadcast --private-key $PRIVATE_KEY
+```
+
 ## Benchmarks
 !todo
