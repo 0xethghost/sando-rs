@@ -4,21 +4,13 @@ pragma solidity ^0.8.15;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import "foundry-huff/HuffDeployer.sol";
-interface IFactory {
-    function deployMetamorphicContractFromExistingImplementation(
-    bytes32 salt,
-    address implementationContract,
-    bytes calldata metamorphicContractInitializationCalldata
-  ) external returns (
-    address metamorphicContractAddress
-  );
-}
+import "../interfaces/IMetamorphicContractFactory.sol";
 
 contract Deploy is Script {
-    IFactory factory;
+    IMetamorphicContractFactory factory;
     // serachers
     function setUp() public {
-      factory = IFactory(0x00000000e82eb0431756271F0d00CFB143685e7B);
+      factory = IMetamorphicContractFactory(0x00000000e82eb0431756271F0d00CFB143685e7B);
     }
 
     function run() public{
