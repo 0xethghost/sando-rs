@@ -24,19 +24,7 @@ Example:
 > JUMPDEST 0xfa is reserved to handle [UniswapV3 callback](https://docs.uniswap.org/contracts/v3/reference/core/interfaces/callback/IUniswapV3SwapCallback).
 
 ### Encoding WETH Value Using tx.value
-When dealing with WETH amounts, the amount is encoded by first dividing the value by 100000, and setting the divided value as `tx.value` when calling the contract. The contract then multiplies `tx.value` by 100000 to get the original amount. 
-
-> the last 5 digits of the original value are lost after encoding, however it is a small amount of wei and can be ignored.
-
-Example:
-```as
-    // setup calldata for swap(wethOut, 0, address(this), "")
-    [V2_Swap_Sig] 0x00 mstore                   
-    0x0186a0 callvalue mul 0x04 mstore          // original weth value is decoded here by doing 100000 * callvalue    
-    0x00 0x24 mstore                   
-    address 0x44 mstore                         
-    0x80 0x64 mstore                     
-```
+When dealing with WETH amounts, the amount is encoded by first dividing the value by 0x100000000, and setting the divided value as `tx.value` when calling the contract. The contract then multiplies `tx.value` by 0x100000000 to get the original amount. 
 
 ### Encoding Other Token Value Using 5 Bytes Of Calldata
 When dealing with the other token amount, the values can range significantlly depending on token decimal and total supply. To account for full range, we encode by fitting the value into 4 bytes of calldata plus a byte shift. To decode, we byteshift the 4bytes to the left. 
@@ -58,26 +46,27 @@ All calldata is encoded by packing the values together.
 
 | JUMPDEST  | Function Name |
 | :-------------: | :------------- |
-| 0x06  | V2 Swap, Weth is Token0 and Output  |
-| 0x0B  | V2 Swap, Weth is Token0 and Input  |
-| 0x10  | V2 Swap, Weth is Token1 and Output  |
-| 0x15  | V2 Swap, Weth is Token1 and Input |
-| 0x1A  | V3 Swap, Weth is Token1 and Output, Big Encoding |
-| 0x1F  | V3 Swap, Weth is Token0 and Output, Big Encoding  |
-| 0x24  | V3 Swap, Weth is Token1 and Output, Small Encoding  |
-| 0x29  | V3 Swap, Weth is Token0 and Output, Small Encoding |
-| 0x2E  | V3 Swap, Weth is Token0 and Input  |
-| 0x33  | V3 Swap, Weth is Token1 and Input  |
-| 0x38  | Seppuku (self-destruct)  |
-| 0x3D  | Recover Eth  |
-| 0x42  | Recover Weth  |
+| 0x05  | V2 Swap, Weth is Token0 and Output  |
+| 0x0A  | V2 Swap, Weth is Token0 and Input  |
+| 0x0F  | V2 Swap, Weth is Token1 and Output  |
+| 0x14  | V2 Swap, Weth is Token1 and Input |
+| 0x19  | V3 Swap, Weth is Token1 and Output, Big Encoding |
+| 0x1E  | V3 Swap, Weth is Token0 and Output, Big Encoding  |
+| 0x23  | V3 Swap, Weth is Token1 and Output, Small Encoding  |
+| 0x28  | V3 Swap, Weth is Token0 and Output, Small Encoding |
+| 0x2D  | V3 Swap, Weth is Token0 and Input  |
+| 0x32  | V3 Swap, Weth is Token1 and Input  |
+| 0x37  | Seppuku (self-destruct)  |
+| 0x3C  | Recover Eth  |
+| 0x41  | Recover Weth  |
+| 0x46  | Deposit Weth  |
 | 0xFA  | UniswapV3 Callback  |
 
 
 ## Calldata Encoding 
 ### Uniswap V2 Calldata Encoding Format
 
-#### When Weth is input (0x0B, 0x15)
+#### When Weth is input (0x0A, 0x16)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
@@ -85,7 +74,7 @@ All calldata is encoded by packing the values together.
 | 20 | PairAddress  |
 | 4 | AmountOut  |
 
-#### When Weth is output (0x06, 0x10)
+#### When Weth is output (0x05, 0x2a)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
@@ -96,7 +85,7 @@ All calldata is encoded by packing the values together.
 
 ### Uniswap V3 Calldata Encoding Format
 
-#### When Weth is input (0x2E, 0x33)
+#### When Weth is input (0x2D, 0x33)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
@@ -104,7 +93,7 @@ All calldata is encoded by packing the values together.
 | 32 | PairInitHash  | 
 > PairInitHash used to verify msg.sender is pool in callback
 
-#### When Weth is output small (0x2E, 0x33)
+#### When Weth is output small (0x2D, 0x33)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
@@ -114,7 +103,7 @@ All calldata is encoded by packing the values together.
 | 32 | PairInitHash  | 
 > Small encoding when AmountIn < 10^12
 
-#### When Weth is output big (0x1A, 0x1F)
+#### When Weth is output big (0x19, 0x1F)
 | Byte Length  | Variable |
 | :-------------: | :------------- |
 | 1 | JUMPDEST  |
