@@ -26,7 +26,7 @@
 #define macro MAIN() = takes(0) returns (0) {
     returndatasize
     calldataload
-    0x00
+    returndatasize
     byte
     jump
 
@@ -111,7 +111,7 @@
     stop stop stop stop stop stop stop stop stop stop stop stop stop
     stop stop stop stop stop stop stop stop stop stop stop stop stop
     stop stop stop stop stop stop stop stop stop stop stop stop stop
-    stop stop stop stop stop
+    stop stop stop stop stop stop
     
     // calldata: int256 amount0Delta, int256 amount1Delta, bytes data
     uniswap_v3_callback:
@@ -119,13 +119,13 @@
         0x99 calldataload
 
         // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pool_key_hash)
-        __RIGHTPAD(0xFF) 0x00 mstore                // [pool_key_hash] *mstore(ff, 0)
+        __RIGHTPAD(0xFF) returndatasize mstore                // [pool_key_hash] *mstore(ff, 0)
         [FACTORY] chainid mstore                    // [pool_key_hash] *mstore(FACTORY, 1)
         0x15 mstore                                 // [pool_key_hash] *mstore(POOLKEYHASH, 21)
         [PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(PAIR_HASH, 51)
 
         // call keccak256 and transform result to address
-        0x55 0x00 sha3                              // [keccak256_result]
+        0x55 returndatasize sha3                              // [keccak256_result]
         0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         and                                         // [pair_addr]
 
@@ -179,7 +179,6 @@
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize]
         call iszero gtfo jumpi                      // [*pair_swap_args]
         stop
-
 
     v2_input0:
         // validate msg.sender
@@ -410,7 +409,7 @@
         chainid calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
         callvalue 0x40 mstore          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, callvalue * 100000)
@@ -444,7 +443,7 @@
         chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         callvalue 0x40 mstore          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, callvalue * 100000)
         chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
@@ -586,7 +585,7 @@
         chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
         0x29 calldataload 0xb8 shr                 // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]

@@ -275,7 +275,7 @@ contract SandwichHelper is Test {
     }
 
     function setupSigJumpLabelMapping() private {
-        uint256 startingIndex = 0x06;
+        uint256 startingIndex = 0x05;
 
         string[14] memory functionNames = [
             "v2_output0",

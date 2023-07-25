@@ -24,7 +24,7 @@ impl SandwichLogicV3 {
             "v3_input1",
         ];
 
-        let start_offset = 54;
+        let start_offset = 25;
 
         for x in 0..jump_label_names.len() {
             jump_labels.insert(
@@ -95,7 +95,7 @@ impl SandwichLogicV3 {
             ]);
         } else {
             // use big encoding method (encode amount_in by dividing by 1e13 and storing result into 9 bytes)
-            let encoded_amount_in = amount_in / I256::from_dec_str("10000000000000").unwrap();
+            let encoded_amount_in = amount_in / I256::from_hex_str("0x1000000000000").unwrap();
             (payload, _) = utils::encode_packed(&vec![
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::Address(pool.address),
@@ -144,7 +144,7 @@ impl SandwichLogicV3 {
 
 /// returns the encoded value of amount in (actual value passed to contract)
 pub fn encode_intermediary_token(amount_in: U256) -> U256 {
-    (amount_in / U256::from(10000000000000u128)) * U256::from(10000000000000u128)
+    (amount_in / U256::from(281474976710656u128)) * U256::from(281474976710656u128)
 }
 
 /// returns the encoded value of amount in (actual value passed to contract)

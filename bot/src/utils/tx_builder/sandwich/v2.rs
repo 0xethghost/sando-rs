@@ -40,7 +40,7 @@ impl SandwichLogicV2 {
         // pattern: {input||output}{isWeth0||isWeth1}_{numBytesToEncodeTo}
         let jump_label_names = vec!["v2_output0", "v2_input0", "v2_output1", "v2_input1"];
 
-        let start_offset = 34;
+        let start_offset = 5;
 
         for x in 0..jump_label_names.len() {
             jump_labels.insert(
