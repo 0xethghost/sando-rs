@@ -5,10 +5,10 @@ edition = "2021"
 license = "MIT"
 description = "Optimized sandwich bot written using Rust and Huff"
 readme = "README.md"
-homepage = "https://github.com/mouseless-eth/rusty-sando"
-repository = "https://github.com/mouseless-eth/rusty-sando"
+homepage = "https://github.com/sipovalovdmitro/rusty-sando"
+repository = "https://github.com/sipovalovdmitro/rusty-sando"
 keywords = ["Ethereum", "Mev", "Dex", "Sandwich"]
-authors = ["0xmouseless <https://github.com/mouseless-eth>"]
+authors = ["sipovalovdmitro <https://github.com/sipovalovdmitro>"]
 
 [dependencies]
 ethers-flashbots = { git = "https://github.com/onbjerg/ethers-flashbots" }
