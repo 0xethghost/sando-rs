@@ -15,7 +15,8 @@ contract Deploy is Script {
 
     function run() public{
         address sandwich = HuffDeployer.broadcast("sandwich");
-        bytes32 salt = bytes32(0x501e809c8c8d268e136b6975b331ea398e07d35e9b5a134c0ff7a0002228f4e9);
+        bytes32 salt = bytes32(0x501e809c8c8d268e136b6975b331ea398e07d35ebb0885e23d242006e3a20d87);
+        vm.broadcast(0x501E809C8C8d268E136B6975b331EA398e07d35e);
         address metamorphicContract = factory.deployMetamorphicContractFromExistingImplementation(salt, sandwich, "");
         console.log(metamorphicContract);
     }

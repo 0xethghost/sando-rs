@@ -122,7 +122,7 @@ forge test --rpc-url <your-rpc-url-here>
 ## Deployment
 ```console
 source .env  
-forge script ./script/Deploy.s.sol --rpc-url $MAINNET_HTTP_PROVIDER_URL --broadcast --private-key $PRIVATE_KEY
+forge script ./script/Deploy.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --private-key $PRIVATE_KEY
 ```
 
 ## Benchmarks
