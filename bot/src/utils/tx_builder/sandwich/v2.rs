@@ -1,4 +1,4 @@
-use std::ops::Sub;
+use std::ops::{Sub, Div};
 
 use super::*;
 use hashbrown::HashMap;
@@ -80,15 +80,8 @@ impl SandwichLogicV2 {
             ),
         ]);
 
-        let encoded_call_value = amount_in / get_weth_encode_divisor();
-        log::info!(
-            "{}",
-            format!("[payload] {:?}", payload)
-        );
-        log::info!(
-            "{}",
-            format!("[Encoded call value] {:?}", encoded_call_value)
-        );
+        let encoded_call_value = amount_in.div(get_weth_encode_divisor());
+        log::info!("{}", format!("[payload] {:?}", payload));
         (payload, encoded_call_value)
     }
 
@@ -121,7 +114,7 @@ impl SandwichLogicV2 {
             ),
         ]);
 
-        let encoded_call_value = amount_out / get_weth_encode_divisor();
+        let encoded_call_value = amount_out.div(get_weth_encode_divisor());
 
         (payload, encoded_call_value)
     }

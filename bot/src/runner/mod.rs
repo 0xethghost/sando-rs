@@ -105,6 +105,8 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
+            use std::time::Instant;
+            let now = Instant::now();
             let client = utils::create_websocket_client().await?;
             let block_oracle = {
                 let read_lock = self.latest_block_oracle.read().await;
@@ -115,10 +117,6 @@ impl Bot {
                 let read_lock = self.sandwich_state.weth_balance.read().await;
                 (*read_lock).clone()
             };
-            log::info!(
-                "{}",
-                format!("{:?} sandwich balance", sandwich_balance).green()
-            );
             // ignore txs that we can't include in next block
             // enhancement: simulate all txs, store result, and use result when tx can included
             if victim_tx.max_fee_per_gas.unwrap_or(U256::zero()) < block_oracle.next_block.base_fee
@@ -172,7 +170,8 @@ impl Bot {
                 .unwrap();
             let fork_factory =
                 ForkFactory::new_sandbox_factory(client.clone(), initial_db, fork_block);
-
+            let elpased = now.elapsed();
+            log::info!("{}", format!("Time elapsed {:?}", elpased));
             // search for opportunities in all pools that the tx touches (concurrently)
             for sandwichable_pool in sandwichable_pools {
                 if !sandwichable_pool.is_weth_input {
@@ -293,6 +292,7 @@ impl Bot {
                 });
             }
         }
+
         Ok(())
     }
 }
