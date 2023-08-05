@@ -1,7 +1,5 @@
-# Rusty-Sando ![license](https://img.shields.io/badge/License-MIT-green.svg?label=license) ![twitter](https://img.shields.io/twitter/follow/0xMouseless?style=social)
-A practical example on how to perform V2/V3 and multi-meat sandwich attacks written using Rust and Huff.
-
-The goal of this repo is to act as reference material for searchers looking to implement their strategies using Rust and Huff. 
+# Rusty-Sando !  
+A practical MEV bot on how to perform V2/V3 and multi-meat sandwich attacks written using Rust and Huff.
 
 ## Brief Explanation
 Anytime that a transaction interacts with a Uniswap V2/V3 pool and their forks, there is some slippage introduced (router swaps, aggregator swaps, other mev bots). Sandwich bots are a toxic form of MEV as they profit off this slippage by frontrunning the transaction pushing the price of the asset up to the slippage limit and then immediately selling the asset through a backrun transaction.
@@ -20,13 +18,6 @@ Anytime that a transaction interacts with a Uniswap V2/V3 pool and their forks, 
 
 **Contract Logic Breakdown** can be found under [contract/README.md](https://github.com/sipovalovdmitro/rusty-sando/tree/main/contract)
 
-## Notice
-If any bugs or optimizations are found, feel free to create a pull request. **All pull requests are welcome!** 
-
-> **Warning**
->
-> **This software is highly experimental and should be used at your own risk.** Although tested, this bot is experimental software and is provided on an "as is" and "as available" basis under the MIT license. We cannot guarantee the stability or reliability of this codebase and are not responsible for any damage or loss caused by its use. We do not give out warranties. 
-
 ## Acknowledgments
 - [subway](https://github.com/libevm/subway)
 - [subway-rs](https://github.com/refcell/subway-rs)
@@ -37,3 +28,4 @@ If any bugs or optimizations are found, feel free to create a pull request. **Al
 - [reth](https://github.com/paradigmxyz/reth)
 - [ethers-rs](https://github.com/gakonst/ethers-rs)
 - [mev-template-rs](https://github.com/degatchi/mev-template-rs)
+- [rusty-sando](https://github.com/mouseless-eth/rusty-sando)
