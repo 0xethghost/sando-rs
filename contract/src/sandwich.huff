@@ -227,7 +227,7 @@
         0x24 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
 
         // get amountIn and store at memOffset
-        byte mstore                            // extract memOffset and perform mstore
+        byte mstore                                 // extract memOffset and perform mstore
 
         address 0x44 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, address(this))
         0x80 0x64 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, 0x80) 4 + 32 + 32 + 32, 0x80 because bytes is dynamic

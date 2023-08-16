@@ -65,54 +65,54 @@ async fn main() -> Result<()> {
         10000835,
     ));
 
-    // //// Add Sushiswap pairs
-    // dexes.push(Dex::new(
-    //     H160::from_str("0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     10794229,
-    // ));
+    //// Add Sushiswap pairs
+    dexes.push(Dex::new(
+        H160::from_str("0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac").unwrap(),
+        PoolVariant::UniswapV2,
+        10794229,
+    ));
 
-    // //// Add CryptoCom-Swap pairs
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x9DEB29c9a4c7A88a3C0257393b7f3335338D9A9D").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     10828414,
-    // ));
+    //// Add CryptoCom-Swap pairs
+    dexes.push(Dex::new(
+        H160::from_str("0x9DEB29c9a4c7A88a3C0257393b7f3335338D9A9D").unwrap(),
+        PoolVariant::UniswapV2,
+        10828414,
+    ));
 
-    // //// Add Convergence-Swap pairs
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x4eef5746ED22A2fD368629C1852365bf5dcb79f1").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     12385067,
-    // ));
+    //// Add Convergence-Swap pairs
+    dexes.push(Dex::new(
+        H160::from_str("0x4eef5746ED22A2fD368629C1852365bf5dcb79f1").unwrap(),
+        PoolVariant::UniswapV2,
+        12385067,
+    ));
 
-    // //// Add Pancake-Swap pairs
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x1097053Fd2ea711dad45caCcc45EfF7548fCB362").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     15614590,
-    // ));
+    //// Add Pancake-Swap pairs
+    dexes.push(Dex::new(
+        H160::from_str("0x1097053Fd2ea711dad45caCcc45EfF7548fCB362").unwrap(),
+        PoolVariant::UniswapV2,
+        15614590,
+    ));
 
-    // //// Add Shiba-Swap pairs, home of shitcoins
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x115934131916C8b277DD010Ee02de363c09d037c").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     12771526,
-    // ));
+    //// Add Shiba-Swap pairs, home of shitcoins
+    dexes.push(Dex::new(
+        H160::from_str("0x115934131916C8b277DD010Ee02de363c09d037c").unwrap(),
+        PoolVariant::UniswapV2,
+        12771526,
+    ));
 
-    // //// Add Saitaswap pools
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x35113a300ca0D7621374890ABFEAC30E88f214b1").unwrap(),
-    //     PoolVariant::UniswapV2,
-    //     15210780,
-    // ));
+    //// Add Saitaswap pools
+    dexes.push(Dex::new(
+        H160::from_str("0x35113a300ca0D7621374890ABFEAC30E88f214b1").unwrap(),
+        PoolVariant::UniswapV2,
+        15210780,
+    ));
 
-    // //// Add UniswapV3 pools
-    // dexes.push(Dex::new(
-    //     H160::from_str("0x1F98431c8aD98523631AE4a59f267346ea31F984").unwrap(),
-    //     PoolVariant::UniswapV3,
-    //     12369621,
-    // ));
+    //// Add UniswapV3 pools
+    dexes.push(Dex::new(
+        H160::from_str("0x1F98431c8aD98523631AE4a59f267346ea31F984").unwrap(),
+        PoolVariant::UniswapV3,
+        12369621,
+    ));
 
     let current_block = client.get_block_number().await.unwrap();
     let all_pools = sync_dex(dexes.clone(), &client, current_block, None)
