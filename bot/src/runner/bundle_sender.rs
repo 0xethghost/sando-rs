@@ -250,6 +250,7 @@ pub async fn send_bundle(
                 + (U256::from(recipe.backrun_gas_used) * max_fee),
         )
         .unwrap_or_default();
+    log::info!("{}", format!("{:?} profit {:?}", recipe.print_meats(), profit));
 
     // send bundle to all relay endpoints (concurrently)
     for relay in relay::get_all_relay_endpoints().await {
@@ -280,7 +281,11 @@ pub async fn send_bundle(
 
             let is_bundle_included = match pending_bundle.await {
                 Ok(_) => true,
-                Err(ethers_flashbots::PendingBundleError::BundleNotIncluded) => false,
+                Err(ethers_flashbots::PendingBundleError::BundleNotIncluded) => {
+                    log::info!("{:?} Block passed without inclusion", recipe.print_meats());
+                    false
+                }
+                ,
                 Err(e) => {
                     log::error!(
                         "{:?} Bundle rejected due to error : {:?}",
@@ -357,7 +362,7 @@ fn calculate_bribe_for_max_fee(
 
     // overpay to get dust onto sandwich contractIf
     // more info: https://twitter.com/libevm/status/1474870661373779969
-    let bribe_amount = if !recipe.has_dust {
+    let bribe_amount = if recipe.has_dust {
         revenue_minus_frontrun_tx_fee + ethers::utils::parse_ether("0.00015").unwrap()
     } else {
         let mut rng = rand::thread_rng();
@@ -365,9 +370,9 @@ fn calculate_bribe_for_max_fee(
         // enchanement: make bribe adaptive based on competitors
         match recipe.target_pool.pool_variant {
             PoolVariant::UniswapV2 => {
-                (revenue_minus_frontrun_tx_fee * (990000000 + rng.gen_range(0..10000000)))
+                (revenue_minus_frontrun_tx_fee * (980000000 + rng.gen_range(0..10000000)))
                     / 1000000000
-            }
+            },
             PoolVariant::UniswapV3 => {
                 (revenue_minus_frontrun_tx_fee * (970000000 + rng.gen_range(0..30000000)))
                     / 1000000000
@@ -387,6 +392,7 @@ fn calculate_bribe_for_max_fee(
     if effective_miner_tip.is_none() {
         return Err(SendBundleError::NegativeMinerTip());
     }
+    log::info!("{:?} effective miner tip is {:?}", recipe.print_meats(), effective_miner_tip.unwrap());
 
     Ok(max_fee)
 }

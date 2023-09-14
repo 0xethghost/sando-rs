@@ -171,7 +171,6 @@ async fn juiced_quadratic_search(
         // {
         //     println!("[revenues] {:?}", revenues);
         // }
-        log::info!("{}", format!("[revenues] {:?}", revenues));
 
         // find interval that produces highest revenue
         let (highest_revenue_index, _highest_revenue) = revenues
@@ -285,6 +284,12 @@ fn sanity_check(
         ),
     };
 
+    #[cfg(test)]
+    {
+        println!("[frontrun data] {:02x?}", frontrun_data);
+        println!("[frontrun value] {:02x?}", frontrun_value);
+    }
+
     // setup evm for frontrun transaction
     evm.env.tx.caller = searcher.0.into();
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
@@ -310,14 +315,10 @@ fn sanity_check(
         Ok(result) => result,
         Err(e) => return Err(SimulationError::FrontrunEvmError(e)),
     };
-    #[cfg(test)]
-    {
-        println!("[frontrun_result] {:?}", frontrun_result);
-    }
     match frontrun_result {
         ExecutionResult::Success { .. } => { /* continue operation */ }
         ExecutionResult::Revert { output, .. } => {
-            return Err(SimulationError::FrontrunReverted(output))
+            return Err(SimulationError::FrontrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => {
             return Err(SimulationError::FrontrunHalted(reason))
@@ -343,7 +344,7 @@ fn sanity_check(
         evm.env.tx.data = meat.input.0.clone();
         evm.env.tx.value = meat.value.into();
         evm.env.tx.chain_id = meat.chain_id.map(|id| id.as_u64());
-        evm.env.tx.nonce = Some(meat.nonce.as_u64());
+        // evm.env.tx.nonce = Some(meat.nonce.as_u64());
         evm.env.tx.gas_limit = meat.gas.as_u64();
         match meat.transaction_type {
             Some(ethers::types::U64([0])) => {
@@ -372,7 +373,6 @@ fn sanity_check(
             false => is_meat_good.push(false),
         }
     }
-
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    BACKRUN TRANSACTION                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -397,7 +397,6 @@ fn sanity_check(
         }
         PoolVariant::UniswapV3 => U256::zero(),
     };
-
     // create tx.data and tx.value for backrun_in
     let (backrun_data, backrun_value) = match pool_variant {
         PoolVariant::UniswapV2 => sandwich_maker.v2.create_payload_weth_is_output(
@@ -416,7 +415,11 @@ fn sanity_check(
             U256::zero(),
         ),
     };
-
+    #[cfg(test)]
+    {
+        println!("[backrun data] {:02x?}", backrun_data);
+        println!("[backrun value] {:02x?}", backrun_value);
+    }
     // setup evm for backrun transaction
     evm.env.tx.caller = searcher.0.into();
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
@@ -428,7 +431,7 @@ fn sanity_check(
     // create access list
     let mut access_list_inspector = AccessListInspector::new(searcher, sandwich_contract);
     evm.inspect_ref(&mut access_list_inspector)
-        .map_err(|e| SimulationError::FrontrunEvmError(e))
+        .map_err(|e| SimulationError::BackrunEvmError(e))
         .unwrap();
     let backrun_access_list = access_list_inspector.into_access_list();
     evm.env.tx.access_list = backrun_access_list.clone();
@@ -438,12 +441,15 @@ fn sanity_check(
     let mut salmonella_inspector = SalmonellaInspectoooor::new();
     let backrun_result = match evm.inspect_commit(&mut salmonella_inspector) {
         Ok(result) => result,
-        Err(e) => return Err(SimulationError::BackrunEvmError(e)),
+        Err(e) => {
+            return Err(SimulationError::BackrunEvmError(e));
+        }
     };
     match backrun_result {
         ExecutionResult::Success { .. } => { /* continue */ }
         ExecutionResult::Revert { output, .. } => {
-            return Err(SimulationError::BackrunReverted(output))
+            log::info!("{}", format!("sanity_check Backrun reverted {:02x?}", output));
+            return Err(SimulationError::BackrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => return Err(SimulationError::BackrunHalted(reason)),
     };
@@ -536,9 +542,9 @@ async fn evaluate_sandwich_revenue(
     evm.env.tx.caller = braindance_controller_address();
     evm.env.tx.transact_to = TransactTo::Call(braindance_address().0.into());
     evm.env.tx.data = frontrun_data.0;
+    evm.env.tx.value = rU256::ZERO;
     evm.env.tx.gas_limit = 700000;
     evm.env.tx.gas_price = next_block.base_fee.into();
-    evm.env.tx.value = rU256::ZERO;
 
     let result = match evm.transact_commit() {
         Ok(result) => result,
@@ -656,10 +662,6 @@ async fn evaluate_sandwich_revenue(
             }
         }
     };
-    
-    // log::info!("{}", format!("[Frontrun in] {:?}", frontrun_in));
-    // log::info!("{}", format!("[Backrun in] {:?}", backrun_in));
-    // log::info!("{}", format!("[Backrun out] {:?}", _backrun_out));
 
     let revenue = post_sandwich_balance
         .checked_sub(braindance_starting_balance())
@@ -793,21 +795,21 @@ mod test {
     //     });
     // }
 
-    // #[test]
-    // fn sandv2_kyber_swap() {
-    //     // Can't use [tokio::test] attr with `global_backed` for some reason
-    //     // so manually create a runtime
-    //     let rt = Runtime::new().unwrap();
-    //     rt.block_on(async {
-    //         create_test(
-    //             16863312,
-    //             "0x08650bb9dc722C9c8C62E79C2BAfA2d3fc5B3293",
-    //             vec!["0x907894174999fdddc8d8f8e90c210cdb894b91c2c0d79ac35603007d3ce54d00"],
-    //             true,
-    //         )
-    //         .await;
-    //     });
-    // }
+    #[test]
+    fn sandv2_kyber_swap() {
+        // Can't use [tokio::test] attr with `global_backed` for some reason
+        // so manually create a runtime
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            create_test(
+                16863312,
+                "0x08650bb9dc722C9c8C62E79C2BAfA2d3fc5B3293",
+                vec!["0x907894174999fdddc8d8f8e90c210cdb894b91c2c0d79ac35603007d3ce54d00"],
+                true,
+            )
+            .await;
+        });
+    }
 
     // #[test]
     // fn sandv2_non_sandwichable() {

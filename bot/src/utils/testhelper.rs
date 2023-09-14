@@ -36,7 +36,7 @@ pub async fn create_fork_ws(fork_block_num: u64) -> (Arc<Provider<Ws>>, AnvilIns
 }
 
 pub async fn create_ws() -> Arc<Provider<Ws>> {
-    let ws = Ws::connect("wss://ws-nd-003-277-688.p2pify.com/25563d963cd0a4ba3a4753bc32be585a").await.unwrap();
+    let ws = Ws::connect("ws://127.0.0.1:8545").await.unwrap();
     let ws_provider = Provider::new(ws).interval(Duration::from_millis(100));
     Arc::new(ws_provider)
 }

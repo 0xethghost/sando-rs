@@ -111,8 +111,8 @@ impl Bot {
             //         continue;
             //     }
             // };
-            use std::time::Instant;
-            let now = Instant::now();
+            // use std::time::Instant;
+            // let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) =>continue,
@@ -130,7 +130,7 @@ impl Bot {
             // enhancement: simulate all txs, store result, and use result when tx can included
             if victim_tx.max_fee_per_gas.unwrap_or(U256::zero()) < block_oracle.next_block.base_fee
             {
-                log::info!("{}", format!("{:?} mf<nbf", victim_tx.hash).cyan());
+                // log::info!("{}", format!("{:?} mf<nbf", victim_tx.hash).cyan());
                 continue;
             }
 
@@ -156,7 +156,7 @@ impl Bot {
             {
                 sd
             } else {
-                log::info!("{:?}", victim_tx.hash);
+                // log::info!("{:?}", victim_tx.hash);
                 continue;
             };
 
@@ -165,7 +165,7 @@ impl Bot {
                 if let Some(sp) = utils::state_diff::extract_pools(&state_diffs, &all_pools) {
                     sp
                 } else {
-                    log::info!("{:?}", victim_tx.hash);
+                    // log::info!("{:?}", victim_tx.hash);
                     continue;
                 };
 
@@ -179,13 +179,13 @@ impl Bot {
                 .unwrap();
             let fork_factory =
                 ForkFactory::new_sandbox_factory(client.clone(), initial_db, fork_block);
-            let elpased = now.elapsed();
-            log::info!("{}", format!("Time elapsed {:?}", elpased));
+            // let elpased = now.elapsed();
+            // log::info!("{}", format!("Time elapsed {:?}", elpased));
             // search for opportunities in all pools that the tx touches (concurrently)
             for sandwichable_pool in sandwichable_pools {
                 if !sandwichable_pool.is_weth_input {
                     // enhancement: increase opportunities by handling swaps in pools with stables
-                    log::info!("{:?} [weth_is_output]", victim_tx.hash);
+                    // log::info!("{:?} [weth_is_output]", victim_tx.hash);
                     continue;
                 } else {
                     log::info!(
