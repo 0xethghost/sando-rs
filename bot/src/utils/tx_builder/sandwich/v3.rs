@@ -95,7 +95,7 @@ impl SandwichLogicV3 {
             ]);
         } else {
             // use big encoding method (encode amount_in by dividing by 1e13 and storing result into 9 bytes)
-            let encoded_amount_in = amount_in / I256::from_hex_str("0x1000000000000").unwrap();
+            let encoded_amount_in = amount_in / I256::from(281474976710656u128);
             (payload, _) = utils::encode_packed(&vec![
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::Address(pool.address),

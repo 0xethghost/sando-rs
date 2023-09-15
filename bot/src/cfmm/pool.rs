@@ -5,8 +5,9 @@ use std::{
 };
 
 use ethers::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Pool {
     pub address: Address,
     pub token_0: Address,
@@ -15,7 +16,7 @@ pub struct Pool {
     pub pool_variant: PoolVariant,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PoolVariant {
     UniswapV2,
     UniswapV3,

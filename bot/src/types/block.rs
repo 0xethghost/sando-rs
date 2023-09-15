@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use serde::{Serialize, Deserialize};
 
 use crate::utils;
+use crate::prelude::Pool;
 use ethers::prelude::*;
 
 #[derive(Debug, Clone, Default)]
@@ -91,4 +93,10 @@ impl BlockOracle {
         self.latest_block.base_fee = latest_block.base_fee_per_gas.unwrap_or_default();
         self.next_block.base_fee = utils::calculate_next_block_base_fee(latest_block);
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AllPoolsInfo{
+    pub last_block_number: U64,
+    pub pools: Vec<Pool>
 }

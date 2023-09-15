@@ -44,12 +44,9 @@ pub async fn create_optimal_sandwich(
         fork_factory,
     )
     .await?;
-
-    // #[cfg(test)]
-    // {
-    //     println!("Optimal amount in: {}", optimal);
-    // }
-    println!("Optimal amount in: {}", optimal);
+    if optimal.is_zero() {
+        return Err(SimulationError::ZeroOptimal());
+    }
 
     sanity_check(
         sandwich_balance,
@@ -741,7 +738,7 @@ mod test {
         )
         .await
         {
-            Ok(sandwich) => println!("revenue: {:?}", sandwich.revenue),
+            Ok(sandwich) => println!("[revenue] {:?}", sandwich.revenue),
             Err(_) => println!("not sandwichable"),
         };
         println!("total_duration took: {:?}", start.elapsed());

@@ -1,3 +1,4 @@
+use std::fs::OpenOptions;
 use std::str::FromStr;
 
 use colored::Colorize;
@@ -8,7 +9,7 @@ use eyre::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 
 use rusty_sando::{
-    prelude::{sync_dex, Dex, PoolVariant},
+    prelude::{sync_dex, AllPoolsInfo, Dex, Pool, PoolVariant},
     runner::Bot,
     utils::{self, dotenv::read_env_vars},
 };
@@ -114,10 +115,61 @@ async fn main() -> Result<()> {
         12369621,
     ));
 
+    // let pools_from_file = utils::pools::get_pools_from_file();
+
+    let mut start_block: Option<BlockNumber> = None;
+    let mut all_pools: Vec<Pool> = vec![];
+
+    // Open the file
+    match OpenOptions::new()
+        .read(true)
+        .open("pools.json.zstd")
+    {
+        Ok(reader) => {
+            // Wrap the file in the zstd decoder
+            let reader = zstd::Decoder::new(reader)?;
+            // Read the data from the decoder
+            let all_pools_info: AllPoolsInfo = serde_json::from_reader(reader)?;
+            let mut pools_from_file = all_pools_info.pools.clone();
+            start_block = Some(BlockNumber::Number(all_pools_info.last_block_number));
+            all_pools.append(&mut pools_from_file);
+        }
+        Err(e) => {
+            println!("Couldn't read pools info from file due to {}", e);
+        }
+    };
+
     let current_block = client.get_block_number().await.unwrap();
-    let all_pools = sync_dex(dexes.clone(), &client, current_block, None)
+    let mut pools = sync_dex(dexes.clone(), &client, current_block, start_block)
         .await
         .unwrap();
+    all_pools.append(&mut pools);
+
+    let data = AllPoolsInfo {
+        last_block_number: current_block,
+        pools: all_pools.clone(),
+    };
+
+    //// write pools to file
+    // Open the file
+    match OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open("pools.json.zstd")
+    {
+        Ok(writer) => {
+            // Wrap the file in the zstd encoder
+            if let Ok(encoder) = zstd::Encoder::new(writer, 0){
+                let writer = encoder.auto_finish();
+                // Write the data into the encoder
+                serde_json::to_writer(writer, &data)?;
+            };
+        }
+        Err(e) => {
+            println!("Failed to write to pools file due to {}", e);
+        }
+    }
 
     log::info!("all_pools_len: {}", all_pools.len());
 
