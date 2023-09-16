@@ -129,7 +129,7 @@ async fn juiced_quadratic_search(
         false
     };
     let mut highest_sando_input = U256::zero();
-    let number_of_intervals = 10;
+    let number_of_intervals = 15;
     let mut counter = 0;
 
     // continue search until termination condition is met (no point seraching down to closest wei)
@@ -181,7 +181,7 @@ async fn juiced_quadratic_search(
         // enhancement: find better way to increase finding opps incase of all rev=0
         if revenues[highest_revenue_index] == U256::zero() {
             // most likely there is no sandwich possibility
-            if counter == 3 {
+            if counter == 10 {
                 return Ok(U256::zero());
             }
             // no revenue found, most likely small optimal so decrease range

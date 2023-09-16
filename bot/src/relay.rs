@@ -66,16 +66,16 @@ pub async fn get_all_relay_endpoints() -> Vec<BundleRelay> {
     let client = utils::create_websocket_client().await.unwrap();
 
     let endpoints = vec![
-        ("builder0x69", "http://builder0x69.io/"),
+        ("builder0x69", "https://builder0x69.io/"),
         ("beaverbuild", "https://rpc.beaverbuild.org/"),
         ("rsync-builder", "https://rsync-builder.xyz/"),
         ("flashbots", "https://relay.flashbots.net/"),
-        ("eth-builder", "https://eth-builder.com/"),
-        ("lightspeedbuilder", "https://rpc.lightspeedbuilder.info/"),
-        ("edennetwork", "https://api.edennetwork.io/v1/bundle"),
-        ("ultrasound", "https://relay.ultrasound.money/"),
-        ("agnostic-relay", "https://agnostic-relay.net/"),
-        ("relayoor-wtf", "https://relayooor.wtf/"),
+        // ("eth-builder", "https://eth-builder.com/"),
+        // ("lightspeedbuilder", "https://rpc.lightspeedbuilder.info/"),
+        // ("edennetwork", "https://api.edennetwork.io/v1/bundle"),
+        // ("ultrasound", "https://relay.ultrasound.money/"),
+        // ("agnostic-relay", "https://agnostic-relay.net/"),
+        // ("relayoor-wtf", "https://relayooor.wtf/"),
         //"http://relayooor.wtf/",
         //"http://mainnet.aestus.live/",
         //"https://mainnet-relay.securerpc.com",

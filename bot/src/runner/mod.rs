@@ -111,11 +111,11 @@ impl Bot {
             //         continue;
             //     }
             // };
-            // use std::time::Instant;
-            // let now = Instant::now();
+            use std::time::Instant;
+            let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
-                Err(_) =>continue,
+                Err(_) => continue,
             };
             let block_oracle = {
                 let read_lock = self.latest_block_oracle.read().await;
@@ -179,8 +179,7 @@ impl Bot {
                 .unwrap();
             let fork_factory =
                 ForkFactory::new_sandbox_factory(client.clone(), initial_db, fork_block);
-            // let elpased = now.elapsed();
-            // log::info!("{}", format!("Time elapsed {:?}", elpased));
+
             // search for opportunities in all pools that the tx touches (concurrently)
             for sandwichable_pool in sandwichable_pools {
                 if !sandwichable_pool.is_weth_input {
@@ -287,6 +286,8 @@ impl Bot {
                                 }
                             };
                         });
+                        let elpased = now.elapsed();
+                        log::info!("{}", format!("{:?} Time elapsed {:?}", &victim_hash, elpased));
                     }
 
                     // spawn thread to add tx for mega sandwich calculation

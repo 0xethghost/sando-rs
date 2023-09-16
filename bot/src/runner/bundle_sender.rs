@@ -3,6 +3,7 @@ use ethers::prelude::{rand::Rng, *};
 use hashbrown::HashMap;
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::RwLock;
+use ethers::utils::format_units;
 
 use crate::{
     prelude::{
@@ -250,7 +251,7 @@ pub async fn send_bundle(
                 + (U256::from(recipe.backrun_gas_used) * max_fee),
         )
         .unwrap_or_default();
-    log::info!("{}", format!("{:?} profit {:?}", recipe.print_meats(), profit));
+    log::info!("{}", format!("{:?} profit {:?} ETH", recipe.print_meats(), format_units(profit, "ether").unwrap()));
 
     // send bundle to all relay endpoints (concurrently)
     for relay in relay::get_all_relay_endpoints().await {
@@ -263,7 +264,7 @@ pub async fn send_bundle(
             let pending_bundle = match relay.flashbots_client.inner().send_bundle(&bundle).await {
                 Ok(pb) => pb,
                 Err(_) => {
-                    //log::error!("Failed to send bundle: {:?}", e);
+                    // log::error!("{:?} Failed to send bundle: {:?}", relay.relay_name, e);
                     return;
                 }
             };
@@ -392,7 +393,8 @@ fn calculate_bribe_for_max_fee(
     if effective_miner_tip.is_none() {
         return Err(SendBundleError::NegativeMinerTip());
     }
-    log::info!("{:?} effective miner tip is {:?}", recipe.print_meats(), effective_miner_tip.unwrap());
+       
+    log::info!("{:?} effective miner tip is {:?} gwei", recipe.print_meats(), format_units(effective_miner_tip.unwrap(), "gwei").unwrap());
 
     Ok(max_fee)
 }
