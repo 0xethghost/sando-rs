@@ -1,9 +1,9 @@
 use colored::Colorize;
 use ethers::prelude::{rand::Rng, *};
+use ethers::utils::format_units;
 use hashbrown::HashMap;
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::RwLock;
-use ethers::utils::format_units;
 
 use crate::{
     prelude::{
@@ -251,7 +251,28 @@ pub async fn send_bundle(
                 + (U256::from(recipe.backrun_gas_used) * max_fee),
         )
         .unwrap_or_default();
-    log::info!("{}", format!("{:?} profit {:?} ETH", recipe.print_meats(), format_units(profit, "ether").unwrap()));
+    log::info!(
+        "{}",
+        format!(
+            "{:?} profit {:?} ETH",
+            recipe.print_meats(),
+            format_units(profit, "ether").unwrap()
+        )
+        .bold()
+        .white()
+        .on_black()
+    );
+    log::info!(
+        "{}",
+        format!(
+            "{:?} Target block number {:?}",
+            recipe.print_meats(),
+            target_block.number
+        )
+        .bold()
+        .white()
+        .on_black()
+    );
 
     // send bundle to all relay endpoints (concurrently)
     for relay in relay::get_all_relay_endpoints().await {
@@ -286,7 +307,6 @@ pub async fn send_bundle(
                     log::info!("{:?} Block passed without inclusion", recipe.print_meats());
                     false
                 }
-                ,
                 Err(e) => {
                     log::error!(
                         "{:?} Bundle rejected due to error : {:?}",
@@ -373,7 +393,7 @@ fn calculate_bribe_for_max_fee(
             PoolVariant::UniswapV2 => {
                 (revenue_minus_frontrun_tx_fee * (980000000 + rng.gen_range(0..10000000)))
                     / 1000000000
-            },
+            }
             PoolVariant::UniswapV3 => {
                 (revenue_minus_frontrun_tx_fee * (970000000 + rng.gen_range(0..30000000)))
                     / 1000000000
@@ -393,8 +413,12 @@ fn calculate_bribe_for_max_fee(
     if effective_miner_tip.is_none() {
         return Err(SendBundleError::NegativeMinerTip());
     }
-       
-    log::info!("{:?} effective miner tip is {:?} gwei", recipe.print_meats(), format_units(effective_miner_tip.unwrap(), "gwei").unwrap());
+
+    log::info!(
+        "{:?} effective miner tip is {:?} gwei",
+        recipe.print_meats(),
+        format_units(effective_miner_tip.unwrap(), "gwei").unwrap()
+    );
 
     Ok(max_fee)
 }

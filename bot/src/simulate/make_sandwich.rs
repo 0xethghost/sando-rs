@@ -445,7 +445,6 @@ fn sanity_check(
     match backrun_result {
         ExecutionResult::Success { .. } => { /* continue */ }
         ExecutionResult::Revert { output, .. } => {
-            log::info!("{}", format!("sanity_check Backrun reverted {:02x?}", output));
             return Err(SimulationError::BackrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => return Err(SimulationError::BackrunHalted(reason)),
@@ -584,7 +583,7 @@ async fn evaluate_sandwich_revenue(
         evm.env.tx.data = meat.input.0.clone();
         evm.env.tx.value = meat.value.into();
         evm.env.tx.chain_id = meat.chain_id.map(|id| id.as_u64());
-        evm.env.tx.nonce = Some(meat.nonce.as_u64());
+        // evm.env.tx.nonce = Some(meat.nonce.as_u64());
         evm.env.tx.gas_limit = meat.gas.as_u64();
         match meat.transaction_type {
             Some(ethers::types::U64([0])) => {
@@ -629,7 +628,6 @@ async fn evaluate_sandwich_revenue(
     evm.env.tx.gas_limit = 700000;
     evm.env.tx.gas_price = next_block.base_fee.into();
     evm.env.tx.value = rU256::ZERO;
-    evm.env.tx.nonce = Some(1);
 
     let result = match evm.transact_commit() {
         Ok(result) => result,

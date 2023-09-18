@@ -1,5 +1,6 @@
 use ethers::prelude::*;
 use std::collections::HashMap;
+use ethers::utils::format_units;
 
 use crate::prelude::is_sando_safu::OpCode;
 use crate::prelude::{sandwich_types::OptimalRecipe, PoolVariant};
@@ -47,8 +48,8 @@ pub async fn alert_bundle<'a>(
         meat_hashes,
         recipe.frontrun_gas_used,
         recipe.backrun_gas_used,
-        recipe.revenue.as_u128(),
-        profit
+        format_units(recipe.revenue, "ether").unwrap(),
+        format_units(profit, "ether").unwrap()
     );
 
     let max_length = 1900.min(msg.len());
