@@ -1,6 +1,8 @@
 use colored::Colorize;
 use dashmap::DashMap;
 use ethers::prelude::*;
+// use ethers::types::transaction::eip2930::AccessList;
+use ethers::types::TransactionRequest;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -18,7 +20,7 @@ use super::state::BotState;
 //
 // Arguments:
 // * `oracle`: oracle to update
-pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>) {
+pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state: Arc<BotState>) {
     let next_block_clone = oracle.clone();
 
     tokio::spawn(async move {
@@ -51,10 +53,61 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>) {
                     .bright_purple()
                     .on_black()
                     );
+                    let sandwich_balance = {
+                        let read_lock = sandwich_state.weth_balance.read().await;
+                        (*read_lock).clone()
+                    };
+                    if sandwich_balance > U256::from(2000000000000000000i64) {
+                        let sandwich_address = utils::dotenv::get_sandwich_contract_address();
+                        let searcher_wallet = utils::dotenv::get_searcher_wallet();
+                        // let nonce = utils::get_nonce(&client, searcher_wallet.address())
+                        //     .await
+                        //     .unwrap();
+                        let (payload, value) = get_recover_weth_payload_value(sandwich_balance);
+                        let tx = TransactionRequest::new().to(NameOrAddress::Address(sandwich_address)).value(value).from(searcher_wallet.address()).data(payload.clone());
+                        // let recover_weth_tx_request = Eip1559TransactionRequest {
+                        //     to: Some(NameOrAddress::Address(sandwich_address)),
+                        //     from: Some(searcher_wallet.address()),
+                        //     data: Some(payload.clone().into()),
+                        //     chain_id: Some(U64::from(1)),
+                        //     max_priority_fee_per_gas: Some(U256::from(0)),
+                        //     max_fee_per_gas: Some(next_block.base_fee),
+                        //     gas: Some(U256::from(70000)), // gasused = 70% gaslimit
+                        //     nonce: Some(nonce),
+                        //     value: Some(value),
+                        //     access_list: AccessList::default(),
+                        // };
+                        // let signed_raw_tx =
+                        //     utils::sign_eip1559(recover_weth_tx_request, &searcher_wallet)
+                        //         .await
+                        //         .unwrap();
+                        let pending_tx = client.send_transaction(tx, None).await.unwrap();
+                        log::info!(
+                            "{}",
+                           format!(
+                                "Recover weth transaction {:x?}",
+                                pending_tx.tx_hash().as_bytes()
+                            )
+                            .black()
+                            .on_white()
+                        );
+                        // let receipt = pending_tx.await.unwrap().unwrap();
+
+                    }
                 } // remove write lock due to being out of scope here
             }
         }
     });
+}
+
+fn get_recover_weth_payload_value(sandwich_balance: U256) -> (Vec<u8>, U256) {
+    let swap_type = U256::from(89);
+    let (payload, _) = utils::encode_packed(&[utils::PackedToken::NumberWithShift(
+        swap_type,
+        utils::TakeLastXBytes(8),
+    )]);
+    let value = sandwich_balance / utils::tx_builder::sandwich::get_weth_encode_divisor();
+    (payload, value)
 }
 
 pub fn start_add_new_pools(all_pools: &mut Arc<DashMap<Address, Pool>>, dexes: Vec<Dex>) {

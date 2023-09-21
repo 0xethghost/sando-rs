@@ -2,8 +2,9 @@
 pragma solidity ^0.8.15;
 
 import "forge-std/Script.sol";
+import "forge-std/console.sol";
 
-contract Deposit is Script {
+contract Withdraw is Script {
     address sandwich;
     mapping(string => uint8) internal functionSigsToJumpLabel;
 
@@ -14,13 +15,13 @@ contract Deposit is Script {
     }
 
     function run() public {
-        uint8 depositLabel = getJumpLabelFromSig("depositWeth");
-        bytes memory payload = abi.encodePacked(depositLabel);
-        uint amountDeposit = 0.1 ether;
-        uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
-        vm.broadcast(searcherPrivateKey);
-        // vm.broadcast(0x501E809C8C8d268E136B6975b331EA398e07d35e);
-        (bool result, ) = sandwich.call{value: amountDeposit}(payload);
+        uint8 withdrawLabel = getJumpLabelFromSig("recoverWeth");
+        uint amountWithdraw = 0.35 ether;
+        bytes memory payload = abi.encodePacked(withdrawLabel, amountWithdraw);
+        console.logBytes(payload);
+        uint256 helperPrivateKey = vm.envUint("HELPER_PRIVATE_KEY");
+        vm.broadcast(helperPrivateKey);
+        (bool result, ) = sandwich.call(payload);
         require(result, "Call reverted");
     }
 

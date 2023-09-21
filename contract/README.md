@@ -125,5 +125,17 @@ source .env
 forge script ./script/Deploy.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --private-key $PRIVATE_KEY
 ```
 
+## Withdraw WETH
+```console
+source .env  
+forge script ./script/Withdraw.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $HELPER
+```
+
+## Self destruct
+```console
+source .env  
+forge script ./script/Seppuku.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $HELPER
+```
+
 ## Benchmarks
 !todo

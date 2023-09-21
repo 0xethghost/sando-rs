@@ -3,27 +3,26 @@ pragma solidity ^0.8.15;
 
 import "forge-std/Script.sol";
 
-contract Deposit is Script {
+contract Seppuku is Script {
     address sandwich;
     mapping(string => uint8) internal functionSigsToJumpLabel;
-
     // serachers
     function setUp() public {
         setupSigJumpLabelMapping();
         sandwich = 0x000000146741612bA673d5c70000c65e6bf9e100;
     }
 
-    function run() public {
-        uint8 depositLabel = getJumpLabelFromSig("depositWeth");
-        bytes memory payload = abi.encodePacked(depositLabel);
-        uint amountDeposit = 0.1 ether;
-        uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
-        vm.broadcast(searcherPrivateKey);
+    function run() public{
+        uint8 seppukuLabel = getJumpLabelFromSig("seppuku");
+        bytes memory payload = abi.encodePacked(seppukuLabel);
+        uint256 helperPrivateKey = vm.envUint("HELPER_PRIVATE_KEY");
+        vm.broadcast(helperPrivateKey);
         // vm.broadcast(0x501E809C8C8d268E136B6975b331EA398e07d35e);
-        (bool result, ) = sandwich.call{value: amountDeposit}(payload);
+        (bool result,) = sandwich.call(payload);
         require(result, "Call reverted");
     }
 
+    
     function getJumpLabelFromSig(
         string memory sig
     ) public view returns (uint8) {

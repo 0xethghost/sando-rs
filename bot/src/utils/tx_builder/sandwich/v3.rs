@@ -24,7 +24,7 @@ impl SandwichLogicV3 {
             "v3_input1",
         ];
 
-        let start_offset = 25;
+        let start_offset = 59;
 
         for x in 0..jump_label_names.len() {
             jump_labels.insert(

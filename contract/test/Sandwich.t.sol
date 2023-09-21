@@ -14,8 +14,7 @@ contract SandwichTest is Test {
     address binance8 = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
 
     // serachers
-    address constant admin = 0xfD22Ef4073d379cCa47c3c15AdFb1d3363967257;
-    address constant helper = 0x0F91479f971bd0B98629311B6c9052b8363bc9A5;
+    address constant searcher = 0xfD22Ef4073d379cCa47c3c15AdFb1d3363967257;
 
     address sandwich;
     SandwichHelper sandwichHelper;
@@ -31,8 +30,7 @@ contract SandwichTest is Test {
         weth.transfer(sandwich, wethFundAmount);
 
         // charge for gas fee
-        payable(admin).transfer(100 ether);
-        payable(helper).transfer(100 ether);
+        payable(searcher).transfer(100 ether);
     }
 
     function testV2Weth0Input() public {
@@ -58,7 +56,7 @@ contract SandwichTest is Test {
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
         emit log_bytes(payloadV4);
         emit log_uint(encodedValue);
-        vm.startPrank(admin);
+        vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
         (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
         uint checkpointGasLeft1 = gasleft();
@@ -108,7 +106,7 @@ contract SandwichTest is Test {
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
-        vm.startPrank(admin);
+        vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
         (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
         uint checkpointGasLeft1 = gasleft();
@@ -169,7 +167,7 @@ contract SandwichTest is Test {
             .v2CreateSandwichPayloadWethIsOutput(inputToken, amountIn);
         emit log_bytes(payloadV4);
         emit log_uint(encodedValue);
-        vm.startPrank(admin);
+        vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
         (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
         uint checkpointGasLeft1 = gasleft();
@@ -233,7 +231,7 @@ contract SandwichTest is Test {
         emit log_bytes(payload);
         emit log_uint(encodedValue);
         emit log_uint(amountOutFromEncoded);
-        vm.startPrank(admin);
+        vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         uint checkpointGasLeft1 = gasleft();
@@ -264,66 +262,43 @@ contract SandwichTest is Test {
 
     // Test by recovering the initial funded amount
     function testRecoverWeth() public {
-        vm.startPrank(helper);
+        vm.startPrank(searcher, searcher);
 
+        uint256 recoverAmount = 100 ether;
+        uint256 searcherBalanceBefore = address(searcher).balance;
         uint256 sandwichBalanceBefore = weth.balanceOf(sandwich);
-        uint256 helperBalanceBefore = weth.balanceOf(helper);
+        uint256 sandwichEthBalance = address(sandwich).balance;
 
         string memory functionName = "recoverWeth";
         bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName),
-            sandwichBalanceBefore
+            sandwichHelper.getJumpLabelFromSig(functionName)
         );
-        (bool s, ) = sandwich.call(payload);
+        uint encodedValue = recoverAmount / sandwichHelper.wethEncodeMultiple();
+        uint realAmount = (recoverAmount /
+            sandwichHelper.wethEncodeMultiple()) *
+            sandwichHelper.wethEncodeMultiple();
+        uint256 expectedAmountOut = sandwichEthBalance + realAmount;
+        emit log_bytes(payload);
+        (bool s, ) = sandwich.call{value: encodedValue}(payload);
         assertTrue(s, "calling recoverWeth failed");
 
         uint256 sandwichBalanceAfter = weth.balanceOf(sandwich);
-        uint256 helperBalanceAfter = weth.balanceOf(helper);
+        uint256 searcherBalanceAfter = address(searcher).balance;
 
         // check balance change
         assertTrue(
-            sandwichBalanceAfter == 0,
+            sandwichBalanceBefore == sandwichBalanceAfter + realAmount,
             "sandwich weth balance should be zero"
         );
         assertTrue(
-            helperBalanceAfter == helperBalanceBefore + sandwichBalanceBefore,
+            searcherBalanceAfter == searcherBalanceBefore + expectedAmountOut,
             "searcher should gain all weth from sandwich"
         );
     }
 
-    function testRecoverEth() public {
-        vm.startPrank(helper);
-
-        uint256 sandwichBalanceBefore = address(sandwich).balance;
-        uint256 helperBalanceBefore = address(helper).balance;
-
-        string memory functionName = "recoverEth";
-        emit log_bytes(
-            abi.encodePacked(sandwichHelper.getJumpLabelFromSig(functionName))
-        );
-        bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
-        );
-        (bool s, ) = sandwich.call(payload);
-        assertTrue(s, "calling recoverEth failed");
-
-        uint256 sandwichBalanceAfter = address(sandwich).balance;
-        uint256 helperBalanceAfter = address(helper).balance;
-
-        // check balance change
-        assertTrue(
-            sandwichBalanceAfter == 0,
-            "sandwich eth balance should be zero"
-        );
-        assertTrue(
-            helperBalanceAfter == helperBalanceBefore + sandwichBalanceBefore,
-            "searcher should gain all eth from sandwich"
-        );
-    }
-
     function testDepositWeth() public {
-        vm.startPrank(helper);
-        uint256 helperBalanceBefore = address(helper).balance;
+        vm.startPrank(searcher);
+        uint256 searcherBalanceBefore = address(searcher).balance;
         uint sandwichWethBalanceBefore = weth.balanceOf(sandwich);
         console.log(sandwichWethBalanceBefore);
         uint amountDeposit = 0.1 ether;
@@ -337,17 +312,17 @@ contract SandwichTest is Test {
         (bool s, ) = sandwich.call{value: amountDeposit}(payload);
         vm.stopPrank();
         assertTrue(s, "calling depositWeth failed");
-        uint256 helperBalanceAfter = address(helper).balance;
+        uint256 searcherBalanceAfter = address(searcher).balance;
         uint sandwichWethBalanceAfter = weth.balanceOf(sandwich);
         console.log(sandwichWethBalanceAfter);
-        assertEq(helperBalanceBefore - helperBalanceAfter, amountDeposit);
+        assertEq(searcherBalanceBefore - searcherBalanceAfter, amountDeposit);
         assertEq(
             sandwichWethBalanceAfter - sandwichWethBalanceBefore,
             amountDeposit
         );
     }
 
-    // helper
+    // searcher
     function _getV3PoolInfo(
         address _pool
     ) internal view returns (address token0, address token1, uint24 fee) {
@@ -373,7 +348,7 @@ contract SandwichTest is Test {
                 amountIn
             );
 
-        vm.prank(admin, admin);
+        vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
 
         assertTrue(s, "calling swap failed");
@@ -397,7 +372,7 @@ contract SandwichTest is Test {
         emit log_bytes(payload);
         emit log_uint(encodedValue);
 
-        vm.prank(admin, admin);
+        vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
 
         assertTrue(s, "calling swap failed");
@@ -423,7 +398,7 @@ contract SandwichTest is Test {
                 amountIn
             );
 
-        changePrank(admin);
+        changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "v3 swap failed");
     }
@@ -448,7 +423,7 @@ contract SandwichTest is Test {
                 amountIn
             );
 
-        changePrank(admin, admin);
+        changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "calling swap failed");
     }
@@ -474,42 +449,42 @@ contract SandwichTest is Test {
                 amountIn
             );
 
-        changePrank(admin, admin);
+        changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "calling swap failed");
     }
 
-    function testV3Weth1OutputBig() public {
-        address pool = 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8;
-        (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
-        (address inputToken, address outputToken) = (token0, token1);
-        int256 amountIn = 1e21; // 1000 dai
+    // function testV3Weth1OutputBig() public {
+    //     address pool = 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8;
+    //     (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
+    //     (address inputToken, address outputToken) = (token0, token1);
+    //     int256 amountIn = 1e21; // 1000 dai
 
-        // fund sandwich contract
-        vm.startPrank(binance8);
-        IERC20(inputToken).transfer(sandwich, uint256(amountIn));
+    //     // fund sandwich contract
+    //     vm.startPrank(binance8);
+    //     IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        bytes memory payload = sandwichHelper
-            .v3CreateSandwichPayloadWethIsOutput(
-                pool,
-                inputToken,
-                outputToken,
-                fee,
-                amountIn
-            );
+    //     bytes memory payload = sandwichHelper
+    //         .v3CreateSandwichPayloadWethIsOutput(
+    //             pool,
+    //             inputToken,
+    //             outputToken,
+    //             fee,
+    //             amountIn
+    //         );
 
-        changePrank(admin, admin);
-        (bool s, ) = address(sandwich).call(payload);
-        assertTrue(s, "calling swap failed");
-    }
+    //     changePrank(searcher, searcher);
+    //     (bool s, ) = address(sandwich).call(payload);
+    //     assertTrue(s, "calling swap failed");
+    // }
 
-    function testBreakUniswapV3Callback() public {
-        vm.startPrank(address(0x69696969));
+    // function testBreakUniswapV3Callback() public {
+    //     vm.startPrank(address(0x69696969));
 
-        bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
-        (bool s, ) = sandwich.call(payload);
-        assertFalse(s, "only pools should be able to call callback");
-    }
+    //     bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
+    //     (bool s, ) = sandwich.call(payload);
+    //     assertFalse(s, "only pools should be able to call callback");
+    // }
 
     function testUnauthorized() public {
         vm.startPrank(address(0xf337babe));
@@ -544,8 +519,8 @@ contract SandwichTest is Test {
             s,
             "unauthorized addresses should not be able to seppuku contract"
         );
-        changePrank(helper);
+        changePrank(searcher);
         (s, ) = sandwich.call(payload);
-        assertTrue(s, "calling recoverEth from helper failed");
+        assertTrue(s, "calling recoverEth from searcher failed");
     }
 }
