@@ -50,7 +50,7 @@ contract SandwichTest is Test {
             actualAmountIn
         );
         (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
+            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4, true, false);
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
@@ -102,7 +102,7 @@ contract SandwichTest is Test {
             actualAmountIn
         );
         (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffset(amountOutFromEncoded, 4, true, false);
+            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4, true, false);
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
@@ -147,7 +147,7 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(
+        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffsetV2(
             superFarmBalanceBefore,
             4,
             false,
@@ -210,7 +210,7 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffset(
+        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffsetV2(
             daiBalanceBefore,
             4,
             false,
@@ -454,37 +454,37 @@ contract SandwichTest is Test {
         assertTrue(s, "calling swap failed");
     }
 
-    // function testV3Weth1OutputBig() public {
-    //     address pool = 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8;
-    //     (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
-    //     (address inputToken, address outputToken) = (token0, token1);
-    //     int256 amountIn = 1e21; // 1000 dai
+    function testV3Weth1OutputBig() public {
+        address pool = 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8;
+        (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
+        (address inputToken, address outputToken) = (token0, token1);
+        int256 amountIn = 1e21; // 1000 dai
 
-    //     // fund sandwich contract
-    //     vm.startPrank(binance8);
-    //     IERC20(inputToken).transfer(sandwich, uint256(amountIn));
+        // fund sandwich contract
+        vm.startPrank(binance8);
+        IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-    //     bytes memory payload = sandwichHelper
-    //         .v3CreateSandwichPayloadWethIsOutput(
-    //             pool,
-    //             inputToken,
-    //             outputToken,
-    //             fee,
-    //             amountIn
-    //         );
+        bytes memory payload = sandwichHelper
+            .v3CreateSandwichPayloadWethIsOutput(
+                pool,
+                inputToken,
+                outputToken,
+                fee,
+                amountIn
+            );
 
-    //     changePrank(searcher, searcher);
-    //     (bool s, ) = address(sandwich).call(payload);
-    //     assertTrue(s, "calling swap failed");
-    // }
+        changePrank(searcher, searcher);
+        (bool s, ) = address(sandwich).call(payload);
+        assertTrue(s, "calling swap failed");
+    }
 
-    // function testBreakUniswapV3Callback() public {
-    //     vm.startPrank(address(0x69696969));
+    function testBreakUniswapV3Callback() public {
+        vm.startPrank(address(0x69696969));
 
-    //     bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
-    //     (bool s, ) = sandwich.call(payload);
-    //     assertFalse(s, "only pools should be able to call callback");
-    // }
+        bytes memory payload = abi.encodePacked(uint8(250)); // 0xfa = 250
+        (bool s, ) = sandwich.call(payload);
+        assertFalse(s, "only pools should be able to call callback");
+    }
 
     function testUnauthorized() public {
         vm.startPrank(address(0xf337babe));

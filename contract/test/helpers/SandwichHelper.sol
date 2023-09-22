@@ -25,12 +25,7 @@ contract SandwichHelper is Test {
             : (outputToken, inputToken);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
 
-        uint8 swapType = _v3FindSwapType(
-            true,
-            inputToken,
-            outputToken,
-            amountIn
-        );
+        uint8 swapType = _v3FindSwapType(true, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
@@ -50,41 +45,22 @@ contract SandwichHelper is Test {
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
-
-        uint8 swapType = _v3FindSwapType(
-            false,
-            inputToken,
-            outputToken,
-            amountIn
+        (uint256 encodedAmount, uint256 encodedByteShift, , ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 5);
+        uint8 swapType = _v3FindSwapType(false, inputToken, outputToken);
+        payload = abi.encodePacked(
+            uint8(swapType),
+            address(pool),
+            address(inputToken),
+            pairInitHash,
+            uint8(encodedByteShift),
+            uint40(encodedAmount)
         );
-        if (amountIn <= 281474976710655) {
-            // use small method
-            payload = abi.encodePacked(
-                uint8(swapType),
-                address(pool),
-                address(inputToken),
-                int48(amountIn),
-                pairInitHash
-            );
-        } else {
-            int256 denominator = int256(0x1000000000000);
-            int256 encodedValue = amountIn / denominator;
-            // use big method
-            payload = abi.encodePacked(
-                uint8(swapType),
-                address(pool),
-                address(inputToken),
-                int72(encodedValue),
-                pairInitHash
-            );
-        }
     }
 
     function _v3FindSwapType(
         bool isWethInput,
         address inputToken,
-        address outputToken,
-        int256 amountIn
+        address outputToken
     ) internal view returns (uint8) {
         if (isWethInput) {
             if (inputToken < outputToken) {
@@ -97,20 +73,10 @@ contract SandwichHelper is Test {
         } else {
             if (inputToken < outputToken) {
                 // weth is output and token1
-                if (amountIn <= 281474976710655) {
-                    // && amountIn < 281474976710655 (0xFFFFFFFFFFFF)
-                    return functionSigsToJumpLabel["v3_output1_small"];
-                } else {
-                    return functionSigsToJumpLabel["v3_output1_big"];
-                }
+                return functionSigsToJumpLabel["v3_output1"];
             } else {
                 // weth is output and token0
-                if (amountIn <= 281474976710655) {
-                    // && amountIn < 10000000000000
-                    return functionSigsToJumpLabel["v3_output0_small"];
-                } else {
-                    return functionSigsToJumpLabel["v3_output0_big"];
-                }
+                return functionSigsToJumpLabel["v3_output0"];
             }
         }
     }
@@ -138,7 +104,7 @@ contract SandwichHelper is Test {
             uint256 encodedAmountIn,
             uint256 memoryOffset,
             uint256 amountInActual
-        ) = encodeNumToByteAndOffset(amountIn, 4, false, weth < otherToken);
+        ) = encodeNumToByteAndOffsetV2(amountIn, 4, false, weth < otherToken);
 
         payload = abi.encodePacked(
             uint8(swapType), // token we're giving
@@ -180,7 +146,7 @@ contract SandwichHelper is Test {
             uint256 encodedAmountOut,
             uint256 memoryOffset,
 
-        ) = encodeNumToByteAndOffset(
+        ) = encodeNumToByteAndOffsetV2(
                 GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
                 4,
                 true,
@@ -211,25 +177,19 @@ contract SandwichHelper is Test {
         address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
         if (isWethInput) {
-            if (weth < otherToken) {
-                // weth is input and token0
-                return functionSigsToJumpLabel["v2_input0"];
-            } else {
-                // weth is input and token1
-                return functionSigsToJumpLabel["v2_input1"];
-            }
+            return functionSigsToJumpLabel["v2_input_single"];
         } else {
             if (weth < otherToken) {
                 // weth is output and token0
-                return functionSigsToJumpLabel["v2_output0"];
+                return functionSigsToJumpLabel["v2_output0_single"];
             } else {
                 // weth is output and token1
-                return functionSigsToJumpLabel["v2_output1"];
+                return functionSigsToJumpLabel["v2_output1_single"];
             }
         }
     }
 
-    function encodeNumToByteAndOffset(
+    function encodeNumToByteAndOffsetV2(
         uint256 amount,
         uint256 numBytesToEncodeTo,
         bool isWethInput,
@@ -268,6 +228,36 @@ contract SandwichHelper is Test {
         }
     }
 
+    function encodeNumToByteAndOffsetV3(
+        uint256 amount,
+        uint256 numBytesToEncodeTo
+    )
+        public
+        pure
+        returns (
+            uint256 encodedAmount,
+            uint256 encodedByteShift,
+            uint256 amountAfterEncoding,
+            uint256 memOffset            
+        )
+    {
+        for (uint256 i = 0; i < 32; i++) {
+            uint256 _encodedAmount = amount / 2 ** (8 * i);
+
+            // If we can fit the value in numBytesToEncodeTo bytes, we can encode it
+            if (_encodedAmount <= 2 ** (numBytesToEncodeTo * (8)) - 1) {
+                //uint encodedAmount = amountOutAfter * 2**(8*i);
+                encodedByteShift = i;
+                encodedAmount = _encodedAmount;
+                amountAfterEncoding = encodedAmount << (encodedByteShift * 8);
+                break;
+            }
+        }
+        encodedByteShift = 32 - numBytesToEncodeTo - encodedByteShift;
+
+        memOffset = 68 - numBytesToEncodeTo - encodedByteShift;
+    }
+
     function getJumpLabelFromSig(
         string calldata sig
     ) public view returns (uint8) {
@@ -277,17 +267,18 @@ contract SandwichHelper is Test {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[13] memory functionNames = [
-            "v2_output0",
-            "v2_input0",
-            "v2_output1",
-            "v2_input1",
-            "v3_output1_big",
-            "v3_output0_big",
-            "v3_output1_small",
-            "v3_output0_small",
+        string[14] memory functionNames = [
+            "v2_input_single",
+            "v2_input_multi_first",
+            "v2_input_multi_next",
+            "v2_output0_single",
+            "v2_output1_single",
+            "v2_output_multi_first",
+            "v2_output_multi_next",
             "v3_input0",
             "v3_input1",
+            "v3_output0",
+            "v3_output1",
             "seppuku",
             "recoverWeth",
             "depositWeth"

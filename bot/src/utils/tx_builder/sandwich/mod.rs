@@ -45,6 +45,32 @@ impl SandwichMaker {
     }
 }
 
+
+/// Encoded swap value used by other token
+pub struct EncodedSwapValue {
+    encoded_value: U256,
+    mem_offset: U256,
+    // real value after encoding
+    byte_shift: U256,
+}
+
+impl EncodedSwapValue {
+    fn new(encoded_value: U256, mem_offset: U256, byte_shift: U256) -> Self {
+        Self {
+            encoded_value,
+            mem_offset,
+            byte_shift,
+        }
+    }
+
+    // returns the decoded value after applying byteshift (real value used during swaps)
+    fn decode(&self) -> U256 {
+        self.encoded_value * (U256::from(2).pow(U256::from(8) * self.byte_shift))
+    }
+}
+
+
+
 /// Return the divisor used for encoding call value (weth amount)
 pub fn get_weth_encode_divisor() -> U256 {
     U256::from_dec_str("4294967296").unwrap()

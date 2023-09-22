@@ -10,35 +10,12 @@ pub struct SandwichLogicV2 {
     jump_labels: HashMap<String, u32>,
 }
 
-/// Encoded swap value used by other token
-pub struct EncodedSwapValue {
-    four_byte_value: U256,
-    mem_offset: U256,
-    // real value after encoding
-    byte_shift: U256,
-}
-
-impl EncodedSwapValue {
-    fn new(four_byte_value: U256, mem_offset: U256, byte_shift: U256) -> Self {
-        Self {
-            four_byte_value,
-            mem_offset,
-            byte_shift,
-        }
-    }
-
-    // returns the decoded value after applying byteshift (real value used during swaps)
-    fn decode(&self) -> U256 {
-        self.four_byte_value * (U256::from(2).pow(U256::from(8) * self.byte_shift))
-    }
-}
-
 impl SandwichLogicV2 {
     pub fn new() -> Self {
         let mut jump_labels: HashMap<String, u32> = HashMap::new();
 
         // pattern: {input||output}{isWeth0||isWeth1}_{numBytesToEncodeTo}
-        let jump_label_names = vec!["v2_output0", "v2_input0", "v2_output1", "v2_input1"];
+        let jump_label_names = vec!["v2_input_single", "v2_output0_single", "v2_output1_single"];
 
         let start_offset = 39;
 
@@ -75,7 +52,7 @@ impl SandwichLogicV2 {
             ),
             utils::PackedToken::Address(pair.address),
             utils::PackedToken::NumberWithShift(
-                encoded_swap_value.four_byte_value,
+                encoded_swap_value.encoded_value,
                 utils::TakeLastXBytes(32),
             ),
         ]);
@@ -110,7 +87,7 @@ impl SandwichLogicV2 {
             utils::PackedToken::Address(pair.address),
             utils::PackedToken::Address(other_token),
             utils::PackedToken::NumberWithShift(
-                encoded_swap_value.four_byte_value,
+                encoded_swap_value.encoded_value,
                 utils::TakeLastXBytes(32),
             ),
         ]);
@@ -126,10 +103,9 @@ impl SandwichLogicV2 {
         let weth_addr = utils::constants::get_weth_address();
 
         let swap_type = match (is_weth_input, weth_addr < other_token_addr) {
-            (true, true) => self.jump_labels["v2_input0"],
-            (true, false) => self.jump_labels["v2_input1"],
-            (false, true) => self.jump_labels["v2_output0"],
-            (false, false) => self.jump_labels["v2_output1"],
+            (true, _) => self.jump_labels["v2_input_single"],
+            (false, true) => self.jump_labels["v2_output0_single"],
+            (false, false) => self.jump_labels["v2_output1_single"],
         };
 
         U256::from(swap_type)
@@ -140,11 +116,7 @@ impl SandwichLogicV2 {
 //
 // Returns:
 // EncodedSwapValue representing 4 byte value, and byteshift
-pub fn encode_four_bytes(
-    amount: U256,
-    is_weth_input: bool,
-    is_weth_token0: bool,
-) -> EncodedSwapValue {
+fn encode_four_bytes(amount: U256, is_weth_input: bool, is_weth_token0: bool) -> EncodedSwapValue {
     let mut byte_shift = 0;
     let mut four_byte_encoded_value = U256::zero();
 
@@ -194,7 +166,7 @@ pub fn encode_intermediary_with_dust(
     );
 
     // makes sure that we keep some dust
-    backrun_in.four_byte_value -= U256::from(1);
+    backrun_in.encoded_value -= U256::from(1);
     backrun_in.decode()
 }
 
