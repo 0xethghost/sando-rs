@@ -397,6 +397,7 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        emit log_bytes(payload);
 
         changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
@@ -422,6 +423,7 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        emit log_bytes(payload);
 
         changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);

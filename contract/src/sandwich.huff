@@ -111,10 +111,10 @@
         0x99 calldataload
 
         // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pool_key_hash)
-        __RIGHTPAD(0xFF) returndatasize mstore                // [pool_key_hash] *mstore(ff, 0)
-        [UNISWAP_V3_FACTORY] chainid mstore                    // [pool_key_hash] *mstore(FACTORY, 1)
-        0x15 mstore                                 // [pool_key_hash] *mstore(POOLKEYHASH, 21)
-        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(PAIR_HASH, 51)
+        __RIGHTPAD(0xFF) returndatasize mstore                // [pool_key_hash] *mstore(0, ff)
+        [UNISWAP_V3_FACTORY] chainid mstore                    // [pool_key_hash] *mstore(1, FACTORY)
+        0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
+        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
         0x55 returndatasize sha3                              // [keccak256_result]
@@ -587,7 +587,6 @@
         gtfo0 jump
 
 
-    // **When amountIn is < 10^13**
     v3_output0:
 
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
@@ -602,8 +601,10 @@
         [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
-        0x5a calldataload
-        0x49 calldataload returndatasize byte
+        0x16 calldataload
+        // 0xffffffffff000000000000000000000000000000000000000000000000000000
+        // and
+        0x15 calldataload returndatasize byte 
         shr
         0x44 mstore      // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         [MAX_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
@@ -611,9 +612,9 @@
         0xa0 0x84 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(132, 0x80) *dynamic byte offset
         0x35 0xa4 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(164, 0x02) *dynamic byte length
         // ** abi.encodePacked(isZeroForOne, input_token, pair_address)
-        0x15 calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x1b calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
         0xc4 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(196, isZeroForOne_&_InputTokenAddr)
-        0x2f calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
+        0x2F calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
 
         // call pool.swap
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
@@ -621,7 +622,6 @@
         exit jumpi
         gtfo0 jump
 
-    // **When amountIn is < 10^13**
     v3_output1:
 
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
@@ -636,9 +636,12 @@
         [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
-        0x5a calldataload 
-        0x49 calldataload returndatasize byte 
-        shr 
+        0x16 calldataload
+        // 0xffffffffff000000000000000000000000000000000000000000000000000000
+        // and
+        0x15 calldataload returndatasize byte 
+        shr
+         
         0x44 mstore      // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
@@ -646,9 +649,9 @@
         0x35 0xa4 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(164, 0x02) *dynamic byte length
         // ** abi.encodePacked(isZeroForOne, input_token, pair_address)
         0x0100000000000000000000000000000000000000000000000000000000000000
-        0x15 calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x1b calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
         add 0xc4 mstore                             // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(196, isZeroForOne_&_InputTokenAddr)
-        0x2f calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
+        0x2F calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
 
         // call pool.swap
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]

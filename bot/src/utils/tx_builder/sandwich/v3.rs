@@ -77,13 +77,16 @@ impl SandwichLogicV3 {
         let (payload, _) = utils::encode_packed(&vec![
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
-            utils::PackedToken::Address(input),
-            utils::PackedToken::Bytes(&pool_key_hash),
-            utils::PackedToken::NumberWithShift(encoded_swap_value.byte_shift, utils::TakeLastXBytes(8)),
+            utils::PackedToken::NumberWithShift(
+                U256::from((32 - 5 - encoded_swap_value.byte_shift.as_u64()) * 8),
+                utils::TakeLastXBytes(8),
+            ),
             utils::PackedToken::NumberWithShift(
                 encoded_swap_value.encoded_value,
                 utils::TakeLastXBytes(40),
             ),
+            utils::PackedToken::Address(input),
+            utils::PackedToken::Bytes(&pool_key_hash),
         ]);
 
         payload
@@ -119,7 +122,7 @@ fn encode_five_bytes(amount: U256) -> EncodedSwapValue {
 
         // if we can fit the value in 4 bytes (0xFFFFFFFF), we can encode it
         if _encoded_amount < U256::from(2).pow(U256::from(5 * 8)) {
-            encoded_value = _encoded_amount;
+            encoded_value = _encoded_amount - 1;
             byte_shift = i;
             break;
         }
@@ -133,9 +136,11 @@ fn encode_five_bytes(amount: U256) -> EncodedSwapValue {
 
 /// returns the encoded value of amount in (actual value passed to contract)
 pub fn encode_intermediary_token(amount_in: U256) -> U256 {
-    let encoded_swap_value = encode_five_bytes(amount_in);
-    encoded_swap_value.decode()
-}   
+    let mut backrun_in = encode_five_bytes(amount_in);
+    // makes sure that we keep some dust
+    backrun_in.encoded_value -= U256::from(1);
+    backrun_in.decode()
+}
 
 /// returns the encoded value of amount in (actual value passed to contract)
 pub fn encode_weth(amount_in: U256) -> U256 {

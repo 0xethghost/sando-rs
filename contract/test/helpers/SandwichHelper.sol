@@ -45,15 +45,20 @@ contract SandwichHelper is Test {
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
-        (uint256 encodedAmount, uint256 encodedByteShift, , ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 5);
+        (
+            uint256 encodedAmount,
+            uint256 encodedByteShift,
+            ,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 5);
         uint8 swapType = _v3FindSwapType(false, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
+            uint8(encodedByteShift * 8),
+            uint40(encodedAmount),
             address(inputToken),
-            pairInitHash,
-            uint8(encodedByteShift),
-            uint40(encodedAmount)
+            pairInitHash
         );
     }
 
@@ -238,7 +243,7 @@ contract SandwichHelper is Test {
             uint256 encodedAmount,
             uint256 encodedByteShift,
             uint256 amountAfterEncoding,
-            uint256 memOffset            
+            uint256 memOffset
         )
     {
         for (uint256 i = 0; i < 32; i++) {
@@ -248,7 +253,7 @@ contract SandwichHelper is Test {
             if (_encodedAmount <= 2 ** (numBytesToEncodeTo * (8)) - 1) {
                 //uint encodedAmount = amountOutAfter * 2**(8*i);
                 encodedByteShift = i;
-                encodedAmount = _encodedAmount;
+                encodedAmount = _encodedAmount - 1;
                 amountAfterEncoding = encodedAmount << (encodedByteShift * 8);
                 break;
             }
@@ -269,16 +274,16 @@ contract SandwichHelper is Test {
 
         string[14] memory functionNames = [
             "v2_input_single",
-            "v2_input_multi_first",
-            "v2_input_multi_next",
             "v2_output0_single",
             "v2_output1_single",
-            "v2_output_multi_first",
-            "v2_output_multi_next",
             "v3_input0",
             "v3_input1",
             "v3_output0",
             "v3_output1",
+            "v2_input_multi_first",
+            "v2_input_multi_next",
+            "v2_output_multi_first",
+            "v2_output_multi_next",
             "seppuku",
             "recoverWeth",
             "depositWeth"
