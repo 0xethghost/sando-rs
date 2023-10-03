@@ -33,6 +33,7 @@ impl SandwichLogicV3 {
     pub fn create_payload_weth_is_input(
         &self,
         amount_in: I256,
+        amount_out: I256,
         input: Address,
         output: Address,
         pool: Pool,
@@ -44,10 +45,19 @@ impl SandwichLogicV3 {
             abi::Token::Address(token_1),
             abi::Token::Uint(fee),
         ]));
+        let encoded_swap_value: EncodedSwapValue = encode_five_bytes(U256::from(amount_out.as_u128()));
 
         let (payload, _) = utils::encode_packed(&[
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
+            utils::PackedToken::NumberWithShift(
+                U256::from((32 - 5 - encoded_swap_value.byte_shift.as_u64()) * 8),
+                utils::TakeLastXBytes(8),
+            ),
+            utils::PackedToken::NumberWithShift(
+                encoded_swap_value.encoded_value,
+                utils::TakeLastXBytes(40),
+            ),
             utils::PackedToken::Bytes(&pool_key_hash),
         ]);
 
@@ -60,10 +70,11 @@ impl SandwichLogicV3 {
     pub fn create_payload_weth_is_output(
         &self,
         amount_in: I256,
+        amount_out: I256,
         input: Address,
         output: Address,
         pool: Pool,
-    ) -> Vec<u8> {
+    ) -> (Vec<u8>, U256) {
         let (token_0, token_1, fee) = (pool.token_0, pool.token_1, pool.swap_fee);
         let swap_type = self._find_swap_type(false, input, output);
         let encoded_swap_value = encode_five_bytes(U256::from(amount_in.as_u128()));
@@ -88,8 +99,9 @@ impl SandwichLogicV3 {
             utils::PackedToken::Address(input),
             utils::PackedToken::Bytes(&pool_key_hash),
         ]);
+        let encoded_call_value = U256::from(amount_out.as_u128()) / get_weth_encode_divisor();
 
-        payload
+        (payload, encoded_call_value)
     }
 
     // Internal helper function to find correct JUMPDEST
@@ -122,7 +134,7 @@ fn encode_five_bytes(amount: U256) -> EncodedSwapValue {
 
         // if we can fit the value in 4 bytes (0xFFFFFFFF), we can encode it
         if _encoded_amount < U256::from(2).pow(U256::from(5 * 8)) {
-            encoded_value = _encoded_amount - 1;
+            encoded_value = _encoded_amount;
             byte_shift = i;
             break;
         }
@@ -140,6 +152,11 @@ pub fn encode_intermediary_token(amount_in: U256) -> U256 {
     // makes sure that we keep some dust
     backrun_in.encoded_value -= U256::from(1);
     backrun_in.decode()
+}
+
+pub fn decode_intermediary(amount_in: U256) -> U256 {
+    let encoded = encode_five_bytes(amount_in);
+    encoded.decode()
 }
 
 /// returns the encoded value of amount in (actual value passed to contract)

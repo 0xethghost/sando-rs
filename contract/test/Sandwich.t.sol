@@ -147,12 +147,8 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffsetV2(
-            superFarmBalanceBefore,
-            4,
-            false,
-            true
-        );
+        (, , uint256 actualAmountIn) = sandwichHelper
+            .encodeNumToByteAndOffsetV2(superFarmBalanceBefore, 4, false, true);
         uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
             inputToken,
             address(weth),
@@ -210,12 +206,8 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (, , uint256 actualAmountIn) = sandwichHelper.encodeNumToByteAndOffsetV2(
-            daiBalanceBefore,
-            4,
-            false,
-            false
-        );
+        (, , uint256 actualAmountIn) = sandwichHelper
+            .encodeNumToByteAndOffsetV2(daiBalanceBefore, 4, false, false);
         uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
             inputToken,
             address(weth),
@@ -381,7 +373,7 @@ contract SandwichTest is Test {
     function testV3Weth0OutputSmall() public {
         address pool = 0x7379e81228514a1D2a6Cf7559203998E20598346; // ETH - STETH
         (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
-        int256 amountIn = 1e6; // 100 usdt
+        int256 amountIn = 1e16;
 
         (address inputToken, address outputToken) = (token1, token0);
 
@@ -389,7 +381,7 @@ contract SandwichTest is Test {
         vm.startPrank(0x56556075Ab3e2Bb83984E90C52850AFd38F20883);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        bytes memory payload = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -400,7 +392,7 @@ contract SandwichTest is Test {
         emit log_bytes(payload);
 
         changePrank(searcher, searcher);
-        (bool s, ) = address(sandwich).call(payload);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         assertTrue(s, "v3 swap failed");
     }
 
@@ -415,7 +407,7 @@ contract SandwichTest is Test {
         vm.startPrank(0xD249942f6d417CbfdcB792B1229353B66c790726);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        bytes memory payload = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -426,7 +418,7 @@ contract SandwichTest is Test {
         emit log_bytes(payload);
 
         changePrank(searcher, searcher);
-        (bool s, ) = address(sandwich).call(payload);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         assertTrue(s, "calling swap failed");
     }
 
@@ -435,14 +427,13 @@ contract SandwichTest is Test {
         (address token0, address token1, uint24 fee) = _getV3PoolInfo(pool);
         (address inputToken, address outputToken) = (token0, token1);
 
-        int256 amountIn = 1e6; // 100 usdc
-
+        int256 amountIn = 1e10;
         // fund sandwich contract
         address binance14 = 0x28C6c06298d514Db089934071355E5743bf21d60;
         vm.startPrank(binance14);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        bytes memory payload = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -452,7 +443,7 @@ contract SandwichTest is Test {
             );
 
         changePrank(searcher, searcher);
-        (bool s, ) = address(sandwich).call(payload);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         assertTrue(s, "calling swap failed");
     }
 
@@ -463,10 +454,10 @@ contract SandwichTest is Test {
         int256 amountIn = 1e21; // 1000 dai
 
         // fund sandwich contract
-        vm.startPrank(binance8);
+        vm.startPrank(0x25B313158Ce11080524DcA0fD01141EeD5f94b81);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        bytes memory payload = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -476,7 +467,7 @@ contract SandwichTest is Test {
             );
 
         changePrank(searcher, searcher);
-        (bool s, ) = address(sandwich).call(payload);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         assertTrue(s, "calling swap failed");
     }
 

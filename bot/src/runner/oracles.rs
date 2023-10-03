@@ -57,14 +57,19 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                         let read_lock = sandwich_state.weth_balance.read().await;
                         (*read_lock).clone()
                     };
-                    if sandwich_balance > U256::from(2000000000000000000i64) {
+                    if sandwich_balance > U256::from(12000000000000000000i128) {
                         let sandwich_address = utils::dotenv::get_sandwich_contract_address();
                         let searcher_wallet = utils::dotenv::get_searcher_wallet();
                         // let nonce = utils::get_nonce(&client, searcher_wallet.address())
                         //     .await
                         //     .unwrap();
-                        let (payload, value) = get_recover_weth_payload_value(sandwich_balance);
-                        let tx = TransactionRequest::new().to(NameOrAddress::Address(sandwich_address)).value(value).from(searcher_wallet.address()).data(payload.clone());
+                        let recover_amount = U256::from(2000000000000000000i64);
+                        let (payload, value) = get_recover_weth_payload_value(recover_amount);
+                        let tx = TransactionRequest::new()
+                            .to(NameOrAddress::Address(sandwich_address))
+                            .value(value)
+                            .from(searcher_wallet.address())
+                            .data(payload.clone());
                         // let recover_weth_tx_request = Eip1559TransactionRequest {
                         //     to: Some(NameOrAddress::Address(sandwich_address)),
                         //     from: Some(searcher_wallet.address()),
@@ -84,7 +89,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                         let pending_tx = client.send_transaction(tx, None).await.unwrap();
                         log::info!(
                             "{}",
-                           format!(
+                            format!(
                                 "Recover weth transaction {:x?}",
                                 pending_tx.tx_hash().as_bytes()
                             )
@@ -92,7 +97,6 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                             .on_white()
                         );
                         // let receipt = pending_tx.await.unwrap().unwrap();
-
                     }
                 } // remove write lock due to being out of scope here
             }
@@ -100,13 +104,13 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
     });
 }
 
-fn get_recover_weth_payload_value(sandwich_balance: U256) -> (Vec<u8>, U256) {
+fn get_recover_weth_payload_value(recover_amount: U256) -> (Vec<u8>, U256) {
     let swap_type = U256::from(89);
     let (payload, _) = utils::encode_packed(&[utils::PackedToken::NumberWithShift(
         swap_type,
         utils::TakeLastXBytes(8),
     )]);
-    let value = sandwich_balance / utils::tx_builder::sandwich::get_weth_encode_divisor();
+    let value = recover_amount / utils::tx_builder::sandwich::get_weth_encode_divisor();
     (payload, value)
 }
 

@@ -19,16 +19,31 @@ contract SandwichHelper is Test {
         address outputToken,
         uint24 fee,
         int256 amountIn
-    ) public view returns (bytes memory payload, uint256 encodedValue) {
+    ) public returns (bytes memory payload, uint256 encodedValue) {
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
+        uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple();
+        uint256 amountOut = GeneralHelper.getAmountOutV3(
+            uint256(amountInActual),
+            inputToken,
+            outputToken,
+            fee
+        );
+        (
+            uint256 encodedAmount,
+            uint256 encodedByteShift,
+            ,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 5);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
 
         uint8 swapType = _v3FindSwapType(true, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
+            uint8(encodedByteShift * 8),
+            uint40(encodedAmount),
             pairInitHash
         );
         encodedValue = uint256(amountIn) / wethEncodeMultiple();
@@ -40,17 +55,18 @@ contract SandwichHelper is Test {
         address outputToken,
         uint24 fee,
         int256 amountIn
-    ) public view returns (bytes memory payload) {
+    ) public returns (bytes memory payload, uint256 encodedValue) {
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
+        // uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple();
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
         (
             uint256 encodedAmount,
             uint256 encodedByteShift,
             ,
 
-        ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 5);
+        ) = encodeNumToByteAndOffsetV3((uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple(), 5);
         uint8 swapType = _v3FindSwapType(false, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
@@ -60,6 +76,13 @@ contract SandwichHelper is Test {
             address(inputToken),
             pairInitHash
         );
+        uint256 amountOut = GeneralHelper.getAmountOutV3(
+            uint256((uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple()),
+            inputToken,
+            outputToken,
+            fee
+        );
+        encodedValue = amountOut / wethEncodeMultiple();
     }
 
     function _v3FindSwapType(
@@ -253,7 +276,7 @@ contract SandwichHelper is Test {
             if (_encodedAmount <= 2 ** (numBytesToEncodeTo * (8)) - 1) {
                 //uint encodedAmount = amountOutAfter * 2**(8*i);
                 encodedByteShift = i;
-                encodedAmount = _encodedAmount - 1;
+                encodedAmount = _encodedAmount;
                 amountAfterEncoding = encodedAmount << (encodedByteShift * 8);
                 break;
             }

@@ -128,13 +128,13 @@ forge script ./script/Deploy.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --privat
 ## Withdraw WETH
 ```console
 source .env  
-forge script ./script/Withdraw.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $HELPER
+forge script ./script/Withdraw.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $SEARCHER
 ```
 
 ## Self destruct
 ```console
 source .env  
-forge script ./script/Seppuku.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $HELPER
+forge script ./script/Seppuku.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $SEARCHER
 ```
 
 ## Benchmarks
