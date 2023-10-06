@@ -6,6 +6,7 @@ optimizer = true
 optimizer_runs = 200 # Default amount
 ffi = true
 fuzz_runs = 1_000
+evm_version = 'shanghai'
 remappings = [
   "forge-std=lib/forge-std/src/",
   "foundry-huff=lib/foundry-huff/src/",
