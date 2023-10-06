@@ -699,7 +699,7 @@
         and
         dup2 0x1a add calldataload
         0x00 byte shr
-        0x0000000000000000000000000000000000000000000000000000000000000000
+        0x00
         sub
         0x44 mstore
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore
@@ -747,7 +747,7 @@
         and
         dup2 0x15 add calldataload
         0x00 byte shr
-        0x0000000000000000000000000000000000000000000000000000000000000000
+        0x00
         sub
         0x44 mstore
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore
@@ -818,7 +818,7 @@
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         0x00 mload
-        0x0000000000000000000000000000000000000000000000000000000000000000
+        0x00
         sub
         dup3 0x1b add calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
