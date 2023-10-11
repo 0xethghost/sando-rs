@@ -2,11 +2,12 @@
 pragma solidity ^0.8.15;
 
 import "./GeneralHelper.sol";
-import "forge-std/Test.sol";
+
+// import "forge-std/Test.sol";
 
 //import "forge-std/console.sol";
 
-contract SandwichHelper is Test {
+contract SandwichHelper {
     mapping(string => uint8) internal functionSigsToJumpLabel;
 
     constructor() {
@@ -23,7 +24,8 @@ contract SandwichHelper is Test {
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
-        uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple();
+        uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) *
+            wethEncodeMultiple();
         uint256 amountOut = GeneralHelper.getAmountOutV3(
             uint256(amountInActual),
             inputToken,
@@ -36,9 +38,10 @@ contract SandwichHelper is Test {
             ,
 
         ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 5);
+        console.log("Encoded amount out", encodedAmount);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
 
-        uint8 swapType = _v3FindSwapType(true, inputToken, outputToken);
+        uint8 swapType = _v3FindSwapType(false, true, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
@@ -66,8 +69,12 @@ contract SandwichHelper is Test {
             uint256 encodedByteShift,
             ,
 
-        ) = encodeNumToByteAndOffsetV3((uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple(), 5);
-        uint8 swapType = _v3FindSwapType(false, inputToken, outputToken);
+        ) = encodeNumToByteAndOffsetV3(
+                (uint256(amountIn) / wethEncodeMultiple()) *
+                    wethEncodeMultiple(),
+                5
+            );
+        uint8 swapType = _v3FindSwapType(false, false, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
@@ -77,7 +84,10 @@ contract SandwichHelper is Test {
             pairInitHash
         );
         uint256 amountOut = GeneralHelper.getAmountOutV3(
-            uint256((uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple()),
+            uint256(
+                (uint256(amountIn) / wethEncodeMultiple()) *
+                    wethEncodeMultiple()
+            ),
             inputToken,
             outputToken,
             fee
@@ -85,7 +95,104 @@ contract SandwichHelper is Test {
         encodedValue = amountOut / wethEncodeMultiple();
     }
 
+    function v3CreateSandwichMultiMeatPayloadWethIsInput(
+        address pool,
+        address inputToken,
+        address outputToken,
+        uint24 fee,
+        int256 amountIn,
+        bool isFirstOfPayload
+    ) public returns (bytes memory payload, uint256 encodedValue) {
+        if (isFirstOfPayload)
+            payload = abi.encodePacked(functionSigsToJumpLabel["v3_multi_pre"]);
+        (address token0, address token1) = inputToken < outputToken
+            ? (inputToken, outputToken)
+            : (outputToken, inputToken);
+        (
+            uint256 encodedAmountIn,
+            uint256 encodedByteShiftIn,
+            uint amountInActual,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 4);
+        uint256 amountOut = GeneralHelper.getAmountOutV3(
+            uint256(amountInActual),
+            inputToken,
+            outputToken,
+            fee
+        );
+        (
+            uint256 encodedAmountOut,
+            uint256 encodedByteShiftOut,
+            ,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 5);
+        console.log("Amount out", amountOut);
+        console.log("Encoded amount out", encodedAmountOut);
+        bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
+
+        uint8 swapType = _v3FindSwapType(true, true, inputToken, outputToken);
+        payload = abi.encodePacked(
+            payload,
+            uint8(swapType),
+            address(pool),
+            uint8(encodedByteShiftIn * 8),
+            uint32(encodedAmountIn),
+            uint8(encodedByteShiftOut * 8),
+            uint40(encodedAmountOut),
+            pairInitHash
+        );
+        encodedValue = 0;
+    }
+
+    function v3CreateSandwichMultiMeatPayloadWethIsOutput(
+        address pool,
+        address inputToken,
+        address outputToken,
+        uint24 fee,
+        int256 amountIn,
+        bool isFirstOfPayload
+    ) public returns (bytes memory payload, uint256 encodedValue) {
+        if (isFirstOfPayload)
+            payload = abi.encodePacked(functionSigsToJumpLabel["v3_multi_pre"]);
+        (address token0, address token1) = inputToken < outputToken
+            ? (inputToken, outputToken)
+            : (outputToken, inputToken);
+        (
+            uint256 encodedAmountIn,
+            uint256 encodedByteShiftIn,
+            uint amountInActual,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountIn), 5);
+        uint256 amountOut = GeneralHelper.getAmountOutV3(
+            uint256(amountInActual),
+            inputToken,
+            outputToken,
+            fee
+        );
+        (
+            uint256 encodedAmountOut,
+            uint256 encodedByteShiftOut,
+            ,
+
+        ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 4);
+        bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
+
+        uint8 swapType = _v3FindSwapType(true, true, inputToken, outputToken);
+        payload = abi.encodePacked(
+            payload,
+            uint8(swapType),
+            address(pool),
+            uint8(encodedByteShiftOut * 8),
+            uint32(encodedAmountOut),
+            uint8(encodedByteShiftIn * 8),
+            uint40(encodedAmountIn),
+            pairInitHash
+        );
+        encodedValue = 0;
+    }
+
     function _v3FindSwapType(
+        bool isMultimeat,
         bool isWethInput,
         address inputToken,
         address outputToken
@@ -93,61 +200,28 @@ contract SandwichHelper is Test {
         if (isWethInput) {
             if (inputToken < outputToken) {
                 // weth is input and token0
-                return functionSigsToJumpLabel["v3_input0"];
+                if (isMultimeat)
+                    return functionSigsToJumpLabel["v3_input0_multi"];
+                else return functionSigsToJumpLabel["v3_input0"];
             } else {
                 // weth is input and token1
-                return functionSigsToJumpLabel["v3_input1"];
+                if (isMultimeat)
+                    return functionSigsToJumpLabel["v3_input1_multi"];
+                else return functionSigsToJumpLabel["v3_input1"];
             }
         } else {
             if (inputToken < outputToken) {
                 // weth is output and token1
-                return functionSigsToJumpLabel["v3_output1"];
+                if (isMultimeat)
+                    return functionSigsToJumpLabel["v3_output1_multi"];
+                else return functionSigsToJumpLabel["v3_output1"];
             } else {
                 // weth is output and token0
-                return functionSigsToJumpLabel["v3_output0"];
+                if (isMultimeat)
+                    return functionSigsToJumpLabel["v3_output0_multi"];
+                else return functionSigsToJumpLabel["v3_output0"];
             }
         }
-    }
-
-    // Create payload for when weth is input
-    function v2CreateSandwichPayloadWethIsOutput(
-        address otherToken,
-        uint256 amountIn
-    ) public view returns (bytes memory payload, uint256 encodedValue) {
-        // Declare uniswapv2 types
-        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
-            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
-        );
-        address weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-
-        address pair = address(
-            IUniswapV2Pair(univ2Factory.getPair(weth, address(otherToken)))
-        );
-
-        // Libary function starts here
-        uint8 swapType = _v2FindFunctionSig(false, otherToken);
-
-        // encode amountIn
-        (
-            uint256 encodedAmountIn,
-            uint256 memoryOffset,
-            uint256 amountInActual
-        ) = encodeNumToByteAndOffsetV2(amountIn, 4, false, weth < otherToken);
-
-        payload = abi.encodePacked(
-            uint8(swapType), // token we're giving
-            uint8(memoryOffset), // memoryOffset to store amountIn
-            address(pair), // univ2 pair
-            address(otherToken), // inputToken
-            uint32(encodedAmountIn) // amountIn
-        );
-
-        uint256 amountOut = GeneralHelper.getAmountOut(
-            otherToken,
-            weth,
-            amountInActual
-        );
-        encodedValue = amountOut / wethEncodeMultiple();
     }
 
     // Create payload for when weth is input
@@ -194,8 +268,89 @@ contract SandwichHelper is Test {
         encodedValue = amountIn / wethEncodeMultiple();
     }
 
-    function wethEncodeMultiple() public pure returns (uint256) {
-        return uint256(0x100000000);
+    // Create payload for when weth is input
+    function v2CreateSandwichPayloadWethIsOutput(
+        address otherToken,
+        uint256 amountIn
+    ) public view returns (bytes memory payload, uint256 encodedValue) {
+        // Declare uniswapv2 types
+        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
+            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        );
+        address weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        address pair = address(
+            IUniswapV2Pair(univ2Factory.getPair(weth, address(otherToken)))
+        );
+
+        // Libary function starts here
+        uint8 swapType = _v2FindFunctionSig(false, otherToken);
+
+        // encode amountIn
+        (
+            uint256 encodedAmountIn,
+            uint256 memoryOffset,
+            uint256 amountInActual
+        ) = encodeNumToByteAndOffsetV2(amountIn, 4, false, weth < otherToken);
+
+        payload = abi.encodePacked(
+            uint8(swapType), // token we're giving
+            uint8(memoryOffset), // memoryOffset to store amountIn
+            address(pair), // univ2 pair
+            address(otherToken), // inputToken
+            uint32(encodedAmountIn) // amountIn
+        );
+
+        uint256 amountOut = GeneralHelper.getAmountOut(
+            otherToken,
+            weth,
+            amountInActual
+        );
+        encodedValue = amountOut / wethEncodeMultiple();
+    }
+
+    // Create multimeat payload for when weth is input
+    function v2CreateSandwichMultiPayloadWethIsInput(
+        address otherToken,
+        uint256 amountIn
+    ) public view returns (bytes memory payload, uint256 encodedValue) {
+        // Declare uniswapv2 types
+        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
+            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        );
+        address weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        address pair = address(
+            IUniswapV2Pair(univ2Factory.getPair(weth, address(otherToken)))
+        );
+
+        // Encode amountIn here (so we can use it for next step)
+        uint256 amountInActual = (amountIn / wethEncodeMultiple()) *
+            wethEncodeMultiple();
+
+        // Get amounts out and encode it
+        (
+            uint256 encodedAmountOut,
+            uint256 memoryOffset,
+
+        ) = encodeNumToByteAndOffsetV2(
+                GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
+                4,
+                true,
+                weth < otherToken
+            );
+
+        // Libary function starts here
+        uint8 swapType = _v2FindFunctionSig(true, otherToken);
+
+        payload = abi.encodePacked(
+            uint8(swapType), // type of swap to make
+            uint8(memoryOffset), // memoryOffset to store amountOut
+            address(pair), // univ2 pair
+            uint32(encodedAmountOut) // amountOut
+        );
+
+        encodedValue = amountIn / wethEncodeMultiple();
     }
 
     function _v2FindFunctionSig(
@@ -286,6 +441,10 @@ contract SandwichHelper is Test {
         memOffset = 68 - numBytesToEncodeTo - encodedByteShift;
     }
 
+    function wethEncodeMultiple() public pure returns (uint256) {
+        return uint256(0x100000000);
+    }
+
     function getJumpLabelFromSig(
         string calldata sig
     ) public view returns (uint8) {
@@ -295,7 +454,7 @@ contract SandwichHelper is Test {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[15] memory functionNames = [
+        string[19] memory functionNames = [
             "v2_input_single",
             "v2_output0_single",
             "v2_output1_single",
@@ -308,6 +467,10 @@ contract SandwichHelper is Test {
             "v2_output_multi_first",
             "v2_output_multi_next",
             "v3_multi_pre",
+            "v3_input0_multi",
+            "v3_input1_multi",
+            "v3_output0_multi",
+            "v3_output1_multi",
             "seppuku",
             "recoverWeth",
             "depositWeth"

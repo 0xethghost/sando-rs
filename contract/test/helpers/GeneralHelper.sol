@@ -5,6 +5,7 @@ import "v2-core/interfaces/IUniswapV2Pair.sol";
 import "v2-core/interfaces/IUniswapV2Factory.sol";
 import "v2-periphery/interfaces/IUniswapV2Router02.sol";
 import "v3-periphery/interfaces/IQuoter.sol";
+import "v3-core/interfaces/IUniswapV3Pool.sol";
 import "forge-std/console.sol";
 
 library GeneralHelper {
@@ -97,6 +98,16 @@ library GeneralHelper {
             amountIn,
             sqrtPriceLimitX96
         );
+    }
+
+    // searcher
+    function getV3PoolInfo(
+        address _pool
+    ) public view returns (address token0, address token1, uint24 fee) {
+        IUniswapV3Pool pool = IUniswapV3Pool(_pool);
+        token0 = pool.token0();
+        token1 = pool.token1();
+        fee = pool.fee();
     }
 
     function getUniswapPair(
