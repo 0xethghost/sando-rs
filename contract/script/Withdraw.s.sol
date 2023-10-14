@@ -34,7 +34,7 @@ contract Withdraw is Script {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[14] memory functionNames = [
+        string[19] memory functionNames = [
             "v2_input_single",
             "v2_output0_single",
             "v2_output1_single",
@@ -46,6 +46,11 @@ contract Withdraw is Script {
             "v2_input_multi_next",
             "v2_output_multi_first",
             "v2_output_multi_next",
+            "v3_multi_pre",
+            "v3_input0_multi",
+            "v3_input1_multi",
+            "v3_output0_multi",
+            "v3_output1_multi",
             "seppuku",
             "recoverWeth",
             "depositWeth"
