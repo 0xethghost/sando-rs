@@ -808,7 +808,7 @@
         // ** abi.encodePacked(isZeroForOne, input_token, pool_key_hash)
         dup1 0x20 add
         calldataload 0x60 shr 0x58 shl 
-        add 0xc4 mstore
+        0xc4 mstore
         dup1 0x34 add
         calldataload 0xd9 mstore
 
@@ -832,7 +832,7 @@
         0x00 byte shr
         lt
         and
-        swap1 0x3F add
+        swap1 0x54 add
         swap1
         dup2 calldataload 0x00 byte
         jumpi
@@ -859,7 +859,7 @@
         dup2 0x20 add
         calldataload 0x60 shr 0x58 shl 
         add 0xc4 mstore
-        dup2 0x34 add
+        dup1 0x34 add
         calldataload 0xd9 mstore
 
         // call pool.swap
@@ -880,7 +880,7 @@
         0x00 byte shr
         gt
         and
-        swap1 0x3F add
+        swap1 0x54 add
         swap1
         dup2 calldataload 0x00 byte
         jumpi

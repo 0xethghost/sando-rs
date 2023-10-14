@@ -23,6 +23,7 @@ contract SandwichTest is Test {
 
     struct V3Meat {
         address pool;
+        address faucet;
         int256 amountIn;
         bool isFirstOfPayload;
     }
@@ -282,7 +283,7 @@ contract SandwichTest is Test {
 
         assertTrue(s, "calling swap failed");
     }
-    
+
     function testV3Weth1Input() public {
         address pool = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // USDC - WETH
         (address token0, address token1, uint24 fee) = GeneralHelper
@@ -415,26 +416,95 @@ contract SandwichTest is Test {
         V3Meat[2] memory meats = [
             V3Meat(
                 0x7379e81228514a1D2a6Cf7559203998E20598346,
+                address(0),
                 1.2345678912341234 ether,
                 true
             ),
             V3Meat(
                 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640,
+                address(0),
                 1.2345678912341234 ether,
                 false
             )
         ];
         bytes memory payload;
-        for(uint i = 0;i < meats.length; i++){
-            (address token0, address token1, uint24 fee) = GeneralHelper.getV3PoolInfo(meats[i].pool);
-            (address inputToken, address outputToken) = token0 == address(weth)?(token0, token1):(token1, token0);
-            (bytes memory subPayload, ) = sandwichHelper.v3CreateSandwichMultiMeatPayloadWethIsInput(meats[i].pool, inputToken, outputToken, fee, meats[i].amountIn, meats[i].isFirstOfPayload);
+        for (uint i = 0; i < meats.length; i++) {
+            (address token0, address token1, uint24 fee) = GeneralHelper
+                .getV3PoolInfo(meats[i].pool);
+            (address inputToken, address outputToken) = token0 == address(weth)
+                ? (token0, token1)
+                : (token1, token0);
+            (bytes memory subPayload, ) = sandwichHelper
+                .v3CreateSandwichMultiMeatPayloadWethIsInput(
+                    meats[i].pool,
+                    inputToken,
+                    outputToken,
+                    fee,
+                    meats[i].amountIn,
+                    meats[i].isFirstOfPayload
+                );
             payload = abi.encodePacked(payload, subPayload);
         }
         uint8 endPayload = 37;
         payload = abi.encodePacked(payload, endPayload);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call(payload);
+        assertTrue(s, "calling multimeat swap failed");
+    }
+
+    function testV3MultiMeatOutput() public {
+        V3Meat[4] memory meats = [
+            V3Meat(
+                0x7379e81228514a1D2a6Cf7559203998E20598346,
+                0x56556075Ab3e2Bb83984E90C52850AFd38F20883,
+                1e16,
+                true
+            ),
+            V3Meat(
+                0x64A078926AD9F9E88016c199017aea196e3899E1,
+                0xD249942f6d417CbfdcB792B1229353B66c790726,
+                100000 ether,
+                false
+            ),
+            V3Meat(
+                0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640,
+                0x28C6c06298d514Db089934071355E5743bf21d60,
+                1e10,
+                false
+            ),
+            V3Meat(
+                0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8,
+                0x25B313158Ce11080524DcA0fD01141EeD5f94b81,
+                1e21,
+                false
+            )
+        ];
+        bytes memory payload;
+        for (uint i = 0; i < meats.length; i++) {
+            (address token0, address token1, uint24 fee) = GeneralHelper
+                .getV3PoolInfo(meats[i].pool);
+            (address inputToken, address outputToken) = token0 == address(weth)
+                ? (token1, token0)
+                : (token0, token1);
+            if (meats[i].isFirstOfPayload) vm.startPrank(meats[i].faucet);
+            else changePrank(meats[i].faucet);
+            IERC20(inputToken).transfer(sandwich, uint256(meats[i].amountIn));
+            (bytes memory subPayload, ) = sandwichHelper
+                .v3CreateSandwichMultiMeatPayloadWethIsOutput(
+                    meats[i].pool,
+                    inputToken,
+                    outputToken,
+                    fee,
+                    meats[i].amountIn,
+                    meats[i].isFirstOfPayload
+                );
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "calling multimeat swap failed");
     }

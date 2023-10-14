@@ -177,7 +177,7 @@ contract SandwichHelper {
         ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 4);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
 
-        uint8 swapType = _v3FindSwapType(true, true, inputToken, outputToken);
+        uint8 swapType = _v3FindSwapType(true, false, inputToken, outputToken);
         payload = abi.encodePacked(
             payload,
             uint8(swapType),
@@ -186,6 +186,7 @@ contract SandwichHelper {
             uint32(encodedAmountOut),
             uint8(encodedByteShiftIn * 8),
             uint40(encodedAmountIn),
+            address(inputToken),
             pairInitHash
         );
         encodedValue = 0;
