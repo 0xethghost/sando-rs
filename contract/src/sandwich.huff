@@ -313,7 +313,7 @@
         chainid calldataload                              // extract encodedValue by removing memOffset
         returndatasize byte mstore                            // extract memOffset and perform mstore
 
-        // call tokenIn transferFrom
+        // call tokenIn transfer
         returndatasize                              // [retsize, *pair_swap_args]
         returndatasize                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x44     // 68 (4+32+32)                    // [argsize, retoffset, retsize, *pair_swap_args] !expanded token_transfer_args
@@ -360,7 +360,7 @@
         // setup calldata for transferFrom(from,to,value)
         [TRANSFER_FROM_SIG] returndatasize mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
         address 0x04 mstore                         // [*token_transfer_args, *pair_swap_args] - mstore(4, address(this))
-        callvalue 0x40 mstore                       // [*token_transfer_args, *pair_swap_args] - mstore(68, callvalue * 100000)
+        callvalue 0x40 mstore                       // [*token_transfer_args, *pair_swap_args] - mstore(68, callvalue * 0x1000000000)
         dup8 0x24 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // call weth transferFrom
@@ -399,6 +399,7 @@
         gtfo0 jump
 
     v2_input_multi_next:
+        // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
         returndatasize                              
         returndatasize                              
         0xA4  
@@ -408,6 +409,7 @@
         calldataload
         0x60 shr
 
+        // setup calldata for transferFrom(from,to,value)
         [TRANSFER_FROM_SIG] returndatasize mstore   // mstore(0, 0x23b872dd)
         address 0x04 mstore
         returndatasize 0x44 mstore
@@ -416,6 +418,7 @@
         0xd8 shr 0x40 mstore
         dup1 0x24 mstore
 
+        // call weth transferFrom
         returndatasize
         returndatasize
         0x64
@@ -445,7 +448,6 @@
         calldataload 
         0x00 byte
         jumpi
-
         gtfo1 jump
 
     v2_output_multi_first:

@@ -28,6 +28,14 @@ contract SandwichTest is Test {
         bool isFirstOfPayload;
     }
 
+    struct V2Meat {
+        address intermediateToken;
+        address faucet;
+        uint256 amountIn;
+        bool isWethToken0;
+        bool isFirstOfPayload;
+    }
+
     function setUp() public {
         sandwichHelper = new SandwichHelper();
         sandwich = HuffDeployer.deploy("sandwich");
@@ -259,6 +267,58 @@ contract SandwichTest is Test {
         );
     }
 
+    function testV2MultiMeatInput() public {
+        V2Meat[2] memory meats = [
+            V2Meat(
+                0xdAC17F958D2ee523a2206206994597C13D831ec7,
+                address(0),
+                1.94212341234123424 ether,
+                true,
+                true
+            ),
+            V2Meat(
+                0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+                address(0),
+                0.942 ether,
+                false,
+                false
+            )
+        ];
+        bytes memory payload;
+        uint256 callvalue;
+        for (uint i = 0; i < meats.length; i++) {
+            // uint actualAmountIn = (meats[i].amountIn /
+            //     sandwichHelper.wethEncodeMultiple()) *
+            //     sandwichHelper.wethEncodeMultiple();
+            // uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+            //     address(weth),
+            //     meats[i].intermediateToken,
+            //     actualAmountIn
+            // );
+            // (, , uint256 expectedAmountOut) = sandwichHelper
+            //     .encodeNumToByteAndOffsetV2(
+            //         amountOutFromEncoded,
+            //         4,
+            //         true,
+            //         meats[i].isWethToken0
+            //     );
+            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+                .v2CreateSandwichMultiPayloadWethIsInput(
+                    meats[i].intermediateToken,
+                    meats[i].amountIn,
+                    meats[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: callvalue}(payload);
+        assertTrue(s, "calling v2 weth input multimeat swap failed");
+    }
+
     function testV3Weth0Input() public {
         address pool = 0x7379e81228514a1D2a6Cf7559203998E20598346; // ETH - STETH
         (address token0, address token1, uint24 fee) = GeneralHelper
@@ -450,7 +510,7 @@ contract SandwichTest is Test {
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
-        assertTrue(s, "calling multimeat swap failed");
+        assertTrue(s, "calling v3 weth input multimeat swap failed");
     }
 
     function testV3MultiMeatOutput() public {
@@ -487,9 +547,9 @@ contract SandwichTest is Test {
             (address inputToken, address outputToken) = token0 == address(weth)
                 ? (token1, token0)
                 : (token0, token1);
-            if (meats[i].isFirstOfPayload) vm.startPrank(meats[i].faucet);
-            else changePrank(meats[i].faucet);
+            vm.prank(meats[i].faucet);
             IERC20(inputToken).transfer(sandwich, uint256(meats[i].amountIn));
+
             (bytes memory subPayload, ) = sandwichHelper
                 .v3CreateSandwichMultiMeatPayloadWethIsOutput(
                     meats[i].pool,
@@ -504,7 +564,7 @@ contract SandwichTest is Test {
         uint8 endPayload = 37;
         payload = abi.encodePacked(payload, endPayload);
         emit log_bytes(payload);
-        changePrank(searcher, searcher);
+        vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
         assertTrue(s, "calling multimeat swap failed");
     }

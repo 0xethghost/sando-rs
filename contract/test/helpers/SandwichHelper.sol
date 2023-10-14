@@ -313,7 +313,8 @@ contract SandwichHelper {
     // Create multimeat payload for when weth is input
     function v2CreateSandwichMultiPayloadWethIsInput(
         address otherToken,
-        uint256 amountIn
+        uint256 amountIn,
+        bool isFirstOfPayload
     ) public view returns (bytes memory payload, uint256 encodedValue) {
         // Declare uniswapv2 types
         IUniswapV2Factory univ2Factory = IUniswapV2Factory(
@@ -340,18 +341,26 @@ contract SandwichHelper {
                 true,
                 weth < otherToken
             );
-
+        uint encodedAmountIn = amountIn / wethEncodeMultiple();
         // Libary function starts here
         uint8 swapType = _v2FindFunctionSig(true, otherToken);
-
-        payload = abi.encodePacked(
-            uint8(swapType), // type of swap to make
-            uint8(memoryOffset), // memoryOffset to store amountOut
-            address(pair), // univ2 pair
-            uint32(encodedAmountOut) // amountOut
-        );
-
-        encodedValue = amountIn / wethEncodeMultiple();
+        if (isFirstOfPayload) {
+            payload = abi.encodePacked(
+                uint8(swapType), // type of swap to make
+                uint8(memoryOffset), // memoryOffset to store amountOut
+                address(pair), // univ2 pair
+                uint32(encodedAmountOut) // amountOut
+            );
+            encodedValue = encodedAmountIn;
+        } else {
+            payload = abi.encodePacked(
+                uint8(swapType), // type of swap to make
+                uint8(memoryOffset), // memoryOffset to store amountOut
+                address(pair), // univ2 pair
+                uint32(encodedAmountOut), // amountOut
+                uint40(encodedAmountIn) // amountIn
+            );
+        }
     }
 
     function _v2FindFunctionSig(
