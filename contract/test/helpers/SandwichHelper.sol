@@ -243,22 +243,22 @@ contract SandwichHelper {
         // Encode amountIn here (so we can use it for next step)
         uint256 amountInActual = (amountIn / wethEncodeMultiple()) *
             wethEncodeMultiple();
-
+        bool isWethToken0 = weth < otherToken;
         // Get amounts out and encode it
         (
             uint256 encodedAmountOut,
-            uint256 memoryOffset,
+            uint256 encodedByteShift,
 
         ) = encodeNumToByteAndOffsetV2(
                 GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
-                4,
-                true,
-                weth < otherToken
+                4
             );
 
         // Libary function starts here
-        uint8 swapType = _v2FindFunctionSig(true, otherToken);
-
+        uint8 swapType = _v2FindFunctionSig(false, false, true, otherToken);
+        uint256 memoryOffset;
+        if (isWethToken0) memoryOffset = 68 - 4 - encodedByteShift;
+        else memoryOffset = 36 - 4 - encodedByteShift;
         payload = abi.encodePacked(
             uint8(swapType), // type of swap to make
             uint8(memoryOffset), // memoryOffset to store amountOut
@@ -285,18 +285,18 @@ contract SandwichHelper {
         );
 
         // Libary function starts here
-        uint8 swapType = _v2FindFunctionSig(false, otherToken);
-
+        uint8 swapType = _v2FindFunctionSig(false, false, false, otherToken);
+        // bool isWethToken0 = weth < otherToken;
         // encode amountIn
         (
             uint256 encodedAmountIn,
-            uint256 memoryOffset,
+            uint256 encodedByteShift,
             uint256 amountInActual
-        ) = encodeNumToByteAndOffsetV2(amountIn, 4, false, weth < otherToken);
+        ) = encodeNumToByteAndOffsetV2(amountIn, 4);
 
         payload = abi.encodePacked(
             uint8(swapType), // token we're giving
-            uint8(memoryOffset), // memoryOffset to store amountIn
+            uint8(68 - 4 - encodedByteShift), // memoryOffset to store amountIn
             address(pair), // univ2 pair
             address(otherToken), // inputToken
             uint32(encodedAmountIn) // amountIn
@@ -333,17 +333,24 @@ contract SandwichHelper {
         // Get amounts out and encode it
         (
             uint256 encodedAmountOut,
-            uint256 memoryOffset,
+            uint256 encodedByteShift,
 
         ) = encodeNumToByteAndOffsetV2(
                 GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
-                4,
-                true,
-                weth < otherToken
+                4
             );
         uint encodedAmountIn = amountIn / wethEncodeMultiple();
         // Libary function starts here
-        uint8 swapType = _v2FindFunctionSig(true, otherToken);
+        uint8 swapType = _v2FindFunctionSig(
+            true,
+            isFirstOfPayload,
+            true,
+            otherToken
+        );
+        uint256 memoryOffset;
+        bool isWethToken0 = weth < otherToken;
+        if (isWethToken0) memoryOffset = 68 - 4 - encodedByteShift;
+        else memoryOffset = 36 - 4 - encodedByteShift;
         if (isFirstOfPayload) {
             payload = abi.encodePacked(
                 uint8(swapType), // type of swap to make
@@ -363,36 +370,119 @@ contract SandwichHelper {
         }
     }
 
+    // Create multimeat payload for when weth is input
+    function v2CreateSandwichMultiPayloadWethIsOutput(
+        address otherToken,
+        uint256 amountIn,
+        bool isFirstOfPayload
+    ) public view returns (bytes memory payload, uint256 encodedValue) {
+        // Declare uniswapv2 types
+        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
+            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        );
+        address weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        address pair = address(
+            IUniswapV2Pair(univ2Factory.getPair(weth, address(otherToken)))
+        );
+        uint256 memoryOffsetOut;
+        uint256 memoryOffsetIn;
+        bool isWethToken0 = weth < otherToken;
+        // Encode amountIn here (so we can use it for next step)
+        (
+            uint256 encodedAmountIn,
+            uint256 encodedByteShiftIn,
+            uint256 amountInActual
+        ) = encodeNumToByteAndOffsetV2(amountIn, 4);
+        // Get amounts out and encode it
+        (
+            uint256 encodedAmountOut,
+            uint256 encodedByteShiftOut,
+
+        ) = encodeNumToByteAndOffsetV2(
+                GeneralHelper.getAmountOut(otherToken, weth, amountInActual),
+                5                
+            );
+        console.log(encodedByteShiftOut);
+        if (isWethToken0) {
+            memoryOffsetIn = 68 - encodedByteShiftIn - 4; // calldata for transfer(to,value)
+            memoryOffsetOut = 68 - encodedByteShiftOut; // 0x40 + swap(amountout0, amountout1, address(this), "")
+        }
+        else {
+            memoryOffsetIn = 68 - encodedByteShiftIn - 4; // calldata for transfer(to,value)
+            memoryOffsetOut = 100 - encodedByteShiftOut; // 0x40 + swap(amountout0, amountout1, address(this), "")
+        }
+        // Libary function starts here
+        uint8 swapType = _v2FindFunctionSig(
+            true,
+            isFirstOfPayload,
+            false,
+            otherToken
+        );
+        if (isFirstOfPayload) {
+            payload = abi.encodePacked(
+                uint8(swapType), // type of swap to make
+                uint8(memoryOffsetIn), // memoryOffset to store amountIn
+                address(pair), // univ2 pair
+                address(otherToken), // inputToken
+                uint32(encodedAmountIn), // amountIn
+                uint8(memoryOffsetOut)
+            );
+            encodedValue = encodedAmountOut;
+        } else {
+            payload = abi.encodePacked(
+                uint8(swapType), // type of swap to make
+                uint8(memoryOffsetIn), // memoryOffset to store amountIn
+                address(pair), // univ2 pair
+                address(otherToken), // inputToken
+                uint32(encodedAmountIn), // amountIn
+                uint40(encodedAmountOut), // amountOut
+                uint8(memoryOffsetOut) // memoryOffset to store amountOut
+            );
+        }
+    }
+
     function _v2FindFunctionSig(
+        bool isMultimeat,
+        bool isFirstOfPayload,
         bool isWethInput,
         address otherToken
     ) internal view returns (uint8 encodeAmount) {
         address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
         if (isWethInput) {
-            return functionSigsToJumpLabel["v2_input_single"];
+            if (isMultimeat) {
+                if (isFirstOfPayload)
+                    return functionSigsToJumpLabel["v2_input_multi_first"];
+                else return functionSigsToJumpLabel["v2_input_multi_next"];
+            } else return functionSigsToJumpLabel["v2_input_single"];
         } else {
-            if (weth < otherToken) {
-                // weth is output and token0
-                return functionSigsToJumpLabel["v2_output0_single"];
+            if (isMultimeat) {
+                if (isFirstOfPayload) {
+                    return functionSigsToJumpLabel["v2_output_multi_first"];
+                } else {
+                    return functionSigsToJumpLabel["v2_output_multi_next"];
+                }
             } else {
-                // weth is output and token1
-                return functionSigsToJumpLabel["v2_output1_single"];
+                if (weth < otherToken) {
+                    // weth is output and token0
+                    return functionSigsToJumpLabel["v2_output0_single"];
+                } else {
+                    // weth is output and token1
+                    return functionSigsToJumpLabel["v2_output1_single"];
+                }
             }
         }
     }
 
     function encodeNumToByteAndOffsetV2(
         uint256 amount,
-        uint256 numBytesToEncodeTo,
-        bool isWethInput,
-        bool isWethToken0
+        uint256 numBytesToEncodeTo
     )
         public
         pure
         returns (
             uint256 encodedAmount,
-            uint256 encodedByteOffset,
+            uint256 encodedByteShift,
             uint256 amountAfterEncoding
         )
     {
@@ -402,21 +492,10 @@ contract SandwichHelper {
             // If we can fit the value in numBytesToEncodeTo bytes, we can encode it
             if (_encodedAmount <= 2 ** (numBytesToEncodeTo * (8)) - 1) {
                 //uint encodedAmount = amountOutAfter * 2**(8*i);
-                encodedByteOffset = i;
+                encodedByteShift = i;
                 encodedAmount = _encodedAmount;
-                amountAfterEncoding = encodedAmount << (encodedByteOffset * 8);
+                amountAfterEncoding = encodedAmount << (encodedByteShift * 8);
                 break;
-            }
-        }
-
-        if (!isWethInput) {
-            // find byte placement for Transfer(address,uint256)
-            encodedByteOffset = 68 - numBytesToEncodeTo - encodedByteOffset;
-        } else {
-            if (isWethToken0) {
-                encodedByteOffset = 68 - numBytesToEncodeTo - encodedByteOffset; // V2_Swap_Sig 0 amountOut
-            } else {
-                encodedByteOffset = 36 - numBytesToEncodeTo - encodedByteOffset; // V2_Swap_Sig amountOut 0
             }
         }
     }

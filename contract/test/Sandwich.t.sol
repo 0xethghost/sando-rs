@@ -65,7 +65,7 @@ contract SandwichTest is Test {
             actualAmountIn
         );
         (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4, true, false);
+            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4);
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
@@ -117,7 +117,7 @@ contract SandwichTest is Test {
             actualAmountIn
         );
         (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4, true, false);
+            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4);
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
@@ -163,7 +163,7 @@ contract SandwichTest is Test {
         uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
         (, , uint256 actualAmountIn) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(superFarmBalanceBefore, 4, false, true);
+            .encodeNumToByteAndOffsetV2(superFarmBalanceBefore, 4);
         uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
             inputToken,
             address(weth),
@@ -222,7 +222,7 @@ contract SandwichTest is Test {
         uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
         (, , uint256 actualAmountIn) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(daiBalanceBefore, 4, false, false);
+            .encodeNumToByteAndOffsetV2(daiBalanceBefore, 4);
         uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
             inputToken,
             address(weth),
@@ -311,6 +311,47 @@ contract SandwichTest is Test {
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: callvalue}(payload);
+        assertTrue(s, "calling v2 weth input multimeat swap failed");
+    }
+
+    function testV2MultiMeatOutput() public {
+        V2Meat[1] memory meats = [
+            V2Meat(
+                0xe53EC727dbDEB9E2d5456c3be40cFF031AB40A55,
+                binance8,
+                1000000 ether,
+                true,
+                true
+            )/* ,
+            V2Meat(
+                0x6B175474E89094C44Da98b954EedeAC495271d0F,
+                0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8,
+                4722.366481770134 ether,
+                false,
+                false
+            ) */
+        ];
+        bytes memory payload;
+        uint256 callvalue;
+        for (uint i = 0; i < meats.length; i++) {
+            address inputToken = meats[i].intermediateToken;
+            vm.prank(meats[i].faucet);
+            IERC20(inputToken).transfer(sandwich, uint256(meats[i].amountIn));
+            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+                .v2CreateSandwichMultiPayloadWethIsOutput(
+                    meats[i].intermediateToken,
+                    meats[i].amountIn,
+                    meats[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        emit log_uint(callvalue);
         uint8 endPayload = 37;
         payload = abi.encodePacked(payload, endPayload);
         emit log_bytes(payload);

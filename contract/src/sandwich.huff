@@ -501,6 +501,7 @@
         dup6 0x02 add 
         calldataload 0x60 shr
 
+        // setup calldata (in memory) for transfer(to,value)
         [TRANSFER_SIG] dup3 mstore
         dup7 0x2a add
         calldataload
