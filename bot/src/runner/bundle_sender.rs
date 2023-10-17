@@ -254,7 +254,7 @@ pub async fn send_bundle(
     log::info!(
         "{}",
         format!(
-            "{:?} profit {:?} ETH",
+            "{:?} Profits {:?} ETH",
             recipe.print_meats(),
             format_units(profit, "ether").unwrap()
         )
@@ -291,12 +291,15 @@ pub async fn send_bundle(
             };
 
             log::info!(
-                "{:?} {}",
-                recipe.print_meats(),
-                format!("Bundle sent to {}", relay.relay_name)
-                    .bold()
-                    .white()
-                    .on_black()
+                "{}",
+                format!(
+                    "{:?} Bundle sent to {:?}",
+                    recipe.print_meats(),
+                    relay.relay_name
+                )
+                .bold()
+                .white()
+                .on_black()
             );
 
             let bundle_hash = pending_bundle.bundle_hash;

@@ -49,7 +49,6 @@ pub async fn create_optimal_sandwich(
     if optimal.is_zero() {
         return Err(SimulationError::ZeroOptimal());
     }
-
     sanity_check(
         sandwich_balance,
         optimal,

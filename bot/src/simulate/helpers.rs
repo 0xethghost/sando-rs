@@ -197,7 +197,7 @@ pub fn get_amount_out_evm_v3(
     // get liquidity
     let quoter = get_uniswap_v3_quoter_address();
     let quoter_contract = BaseContract::from(
-        parse_abi(&["function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) public returns (uint256 amountOut)"]).unwrap(),
+        parse_abi(&["function quoteExactInputSingle(address, address, uint24, uint256, uint160) external returns (uint256)"]).unwrap(),
     );
     let is_zero_for_one = token_in < token_out;
     let sqrt_price_limit_x96 = get_sqrt_price_limit_x96(is_zero_for_one);
@@ -217,6 +217,7 @@ pub fn get_amount_out_evm_v3(
         )
         .unwrap()
         .0;
+
     let result = match evm.transact_ref() {
         Ok(result) => result.result,
         Err(e) => return Err(SimulationError::EvmError(e)),
@@ -230,11 +231,10 @@ pub fn get_amount_out_evm_v3(
         ExecutionResult::Halt { reason, .. } => return Err(SimulationError::EvmHalted(reason)),
     };
 
-    match quoter_contract.decode_output("quoteExactInputSingle", &output){
+    match quoter_contract.decode_output("quoteExactInputSingle", &output) {
         Ok(amount_out) => return Ok(amount_out),
         Err(e) => return Err(SimulationError::AbiError(e)),
     }
-
 }
 
 // Get token balance
