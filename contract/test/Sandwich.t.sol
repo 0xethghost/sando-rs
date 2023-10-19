@@ -287,21 +287,6 @@ contract SandwichTest is Test {
         bytes memory payload;
         uint256 callvalue;
         for (uint i = 0; i < meats.length; i++) {
-            // uint actualAmountIn = (meats[i].amountIn /
-            //     sandwichHelper.wethEncodeMultiple()) *
-            //     sandwichHelper.wethEncodeMultiple();
-            // uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
-            //     address(weth),
-            //     meats[i].intermediateToken,
-            //     actualAmountIn
-            // );
-            // (, , uint256 expectedAmountOut) = sandwichHelper
-            //     .encodeNumToByteAndOffsetV2(
-            //         amountOutFromEncoded,
-            //         4,
-            //         true,
-            //         meats[i].isWethToken0
-            //     );
             (bytes memory subPayload, uint encodedValue) = sandwichHelper
                 .v2CreateSandwichMultiPayloadWethIsInput(
                     meats[i].intermediateToken,

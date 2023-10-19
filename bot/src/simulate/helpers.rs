@@ -136,7 +136,7 @@ pub fn setup_block_state(evm: &mut EVM<ForkDB>, next_block: &BlockInfo) {
 // Returns:
 // Ok(U256): amount out
 // Err(SimulationError): if error during caluclation
-pub fn get_amount_out_evm(
+pub fn get_amount_out_evm_v2(
     amount_in: U256,
     target_pool: Address,
     token_in: Address,

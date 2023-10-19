@@ -7,7 +7,8 @@ use crate::prelude::fork_factory::ForkFactory;
 use crate::prelude::is_sando_safu::{IsSandoSafu, SalmonellaInspectoooor};
 use crate::prelude::sandwich_types::RawIngredients;
 use crate::prelude::{
-    convert_access_list, get_amount_out_evm, get_amount_out_evm_v3, get_balance_of_evm, PoolVariant,
+    convert_access_list, get_amount_out_evm_v2, get_amount_out_evm_v3, get_balance_of_evm,
+    PoolVariant,
 };
 use crate::types::sandwich_types::OptimalRecipe;
 use crate::types::{BlockInfo, SimulationError};
@@ -240,6 +241,7 @@ fn sanity_check(
     let sandwich_contract = dotenv::get_sandwich_contract_address();
     let pool_variant = ingredients.target_pool.pool_variant;
 
+
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    FRONTRUN TRANSACTION                    */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -260,7 +262,7 @@ fn sanity_check(
             let token_in = ingredients.startend_token;
             let token_out = ingredients.intermediary_token;
             let amount_out =
-                get_amount_out_evm(frontrun_in, target_pool, token_in, token_out, &mut evm)?;
+                get_amount_out_evm_v2(frontrun_in, target_pool, token_in, token_out, &mut evm)?;
             tx_builder::v2::decode_intermediary(amount_out, true, token_out)
         }
         PoolVariant::UniswapV3 => {
@@ -398,10 +400,18 @@ fn sanity_check(
     let backrun_out = match pool_variant {
         PoolVariant::UniswapV2 => {
             let target_pool = ingredients.target_pool.address;
-            let out = get_amount_out_evm(backrun_in, target_pool, token_in, token_out, &mut evm)?;
-            tx_builder::v2::encode_weth(out)
+            let amount_out =
+                get_amount_out_evm_v2(backrun_in, target_pool, token_in, token_out, &mut evm)?;
+            tx_builder::v2::encode_weth(amount_out)
         }
-        PoolVariant::UniswapV3 => U256::zero(),
+        PoolVariant::UniswapV3 => {
+            let token_in = ingredients.intermediary_token;
+            let token_out = ingredients.startend_token;
+            let swap_fee = ingredients.target_pool.swap_fee;
+            let amount_out =
+                get_amount_out_evm_v3(backrun_in, token_in, token_out, swap_fee, &mut evm)?;
+            tx_builder::v3::encode_weth(amount_out)
+        }
     };
     // create tx.data and tx.value for backrun_in
     let (backrun_data, backrun_value) = match pool_variant {

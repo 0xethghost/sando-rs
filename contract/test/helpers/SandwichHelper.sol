@@ -65,8 +65,8 @@ contract SandwichHelper {
         // uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple();
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
         (
-            uint256 encodedAmount,
-            uint256 encodedByteShift,
+            uint256 encodedAmountIn,
+            uint256 encodedByteShiftIn,
             ,
 
         ) = encodeNumToByteAndOffsetV3(
@@ -78,8 +78,8 @@ contract SandwichHelper {
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
-            uint8(encodedByteShift * 8),
-            uint40(encodedAmount),
+            uint8(encodedByteShiftIn * 8),
+            uint40(encodedAmountIn),
             address(inputToken),
             pairInitHash
         );

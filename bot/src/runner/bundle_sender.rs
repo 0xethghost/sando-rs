@@ -284,12 +284,12 @@ pub async fn send_bundle(
         tokio::spawn(async move {
             let pending_bundle = match relay.flashbots_client.inner().send_bundle(&bundle).await {
                 Ok(pb) => pb,
-                Err(_) => {
-                    // log::error!("{:?} Failed to send bundle: {:?}", relay.relay_name, e);
+                Err(e) => {
+                    log::error!("{:?} Failed to send bundle: {:?}", relay.relay_name, e);
                     return;
                 }
             };
-
+            
             log::info!(
                 "{}",
                 format!(
@@ -386,26 +386,24 @@ fn calculate_bribe_for_max_fee(
 
     // overpay to get dust onto sandwich contractIf
     // more info: https://twitter.com/libevm/status/1474870661373779969
-    let bribe_amount = if recipe.has_dust {
-        revenue_minus_frontrun_tx_fee + ethers::utils::parse_ether("0.00015").unwrap()
-    } else {
-        let mut rng = rand::thread_rng();
-
+    let mut rng = rand::thread_rng();
+    
+    let bribe_amount = 
         // enchanement: make bribe adaptive based on competitors
         match recipe.target_pool.pool_variant {
             PoolVariant::UniswapV2 => {
-                (revenue_minus_frontrun_tx_fee * (980000000 + rng.gen_range(0..10000000)))
+                (revenue_minus_frontrun_tx_fee * (950000000 + rng.gen_range(0..10000000)))
                     / 1000000000
             }
             PoolVariant::UniswapV3 => {
-                (revenue_minus_frontrun_tx_fee * (970000000 + rng.gen_range(0..30000000)))
+                (revenue_minus_frontrun_tx_fee * (900000000 + rng.gen_range(0..30000000)))
                     / 1000000000
             }
-        }
+        
     };
 
     // calculating bribe amount
-    let max_fee = bribe_amount / recipe.backrun_gas_used;
+    let max_fee:U256 = bribe_amount / recipe.backrun_gas_used;
 
     if max_fee < target_block.base_fee {
         return Err(SendBundleError::MaxFeeLessThanNextBaseFee());

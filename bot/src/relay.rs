@@ -67,20 +67,16 @@ pub async fn get_all_relay_endpoints() -> Vec<BundleRelay> {
 
     let endpoints = vec![
         ("builder0x69", "https://builder0x69.io/"),
-        ("beaverbuild", "https://rpc.beaverbuild.org/"),
         ("rsync-builder", "https://rsync-builder.xyz/"),
+        ("beaverbuild", "https://rpc.beaverbuild.org/"),
+        ("titanbuilder", "https://rpc.titanbuilder.xyz"),
         ("flashbots", "https://relay.flashbots.net/"),
-        // ("eth-builder", "https://eth-builder.com/"),
+        ("eth-builder", "https://eth-builder.com/"),
         // ("lightspeedbuilder", "https://rpc.lightspeedbuilder.info/"),
-        // ("edennetwork", "https://api.edennetwork.io/v1/bundle"),
-        // ("ultrasound", "https://relay.ultrasound.money/"),
-        // ("agnostic-relay", "https://agnostic-relay.net/"),
-        // ("relayoor-wtf", "https://relayooor.wtf/"),
-        //"http://relayooor.wtf/",
-        //"http://mainnet.aestus.live/",
-        //"https://mainnet-relay.securerpc.com",
-        //"http://agnostic-relay.net/",
-        //"http://relay.ultrasound.money/",
+        ("gambitlabs", "https://builder.gmbit.co/rpc"),
+        // ("bloxroute", "https://mev.api.blxrbdn.com"),
+        ("boba-builder", "https://boba-builder.com/searcher"),
+        ("nfactorial", "https://rpc.nfactorial.xyz"),
     ];
 
     let mut relays: Vec<BundleRelay> = vec![];

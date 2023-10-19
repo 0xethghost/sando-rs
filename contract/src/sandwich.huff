@@ -203,20 +203,11 @@
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
-        0x16 calldataload
-        chainid calldataload                        // extract encodedValue by removing memOffset
-        returndatasize 
-
-        returndatasize
-        returndatasize
-        [V2_SWAP_SIG_32] returndatasize
-
-
         // setup calldata for transferFrom(from,to,value)
         [TRANSFER_FROM_SIG] returndatasize mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
         address 0x04 mstore                         // [*token_transfer_args, *pair_swap_args] - mstore(4, address(this))
         callvalue 0x40 mstore                       // [*token_transfer_args, *pair_swap_args] - mstore(68, callvalue * 100000)
-        dup8 0x24 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
+        dup1 0x24 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // call weth transferFrom
         returndatasize                              // [retsize, *pair_swap_args]
@@ -230,11 +221,14 @@
                                                     // [pair_address, value, argoffset, argsize, retoffset, retsize] !expanded pair_swap_args
 
         // setup calldata for swap(amountOut0, amountOut1, address(this), "")
-        mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
-        0x04 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
-        0x24 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
+        [V2_SWAP_SIG_32] 0x00 mstore                // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        0x00 0x04 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
+        0x00 0x24 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
 
         // get amountIn and store at memOffset
+        0x16 calldataload
+        chainid calldataload                        // extract encodedValue by removing memOffset
+        0x00
         byte mstore                                 // extract memOffset and perform mstore
 
         address 0x44 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, address(this))
@@ -255,13 +249,9 @@
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
-        [V2_SWAP_SIG_32] callvalue add returndatasize
-        returndatasize
-        returndatasize
-
         // setup calldata (in memory) for transfer(to,value)
         [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
-        dup5 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
+        dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // get amountIn and store at memOffset
         0x2a calldataload
@@ -279,10 +269,10 @@
         call pop                                    // [*pair_swap_args]
                                                     // [pair_address, value, argoffset, argsize, retoffset, retsize] !expanded pair_swap_args
 
-        // setup calldata for swap(amountout0, amountout1, address(this), "")
-        0x04 mstore
-        0x24 mstore
-        mstore                       // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f0000...000callvalue)
+        // setup calldata for swap(wethOut, 0, address(this), "")
+        0x00 0x04 mstore
+        0x00 0x24 mstore
+        [V2_SWAP_SIG_32] callvalue add 0x00 mstore                       // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f0000...000callvalue)
         address 0x44 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, address(this))
         0x80 0x64 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, 0x80) 4 + 32 + 32 + 32, 0x80 because bytes is dynamic
 
@@ -301,12 +291,9 @@
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
-        returndatasize
-        [V2_SWAP_SIG_32] returndatasize
-
         // setup calldata (in memory) for transfer(to,value)
         [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
-        dup4 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
+        dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // get amountIn and store at memOffset
         0x2a calldataload
@@ -325,8 +312,8 @@
                                                     // [pair_address, value, argoffset, argsize, retoffset, retsize] !expanded pair_swap_args
 
         // setup calldata for swap(0, wethOut, address(this), "")
-        mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
-        0x04 mstore
+        [V2_SWAP_SIG_32] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        0x00 0x04 mstore
         callvalue 0x20 mstore                       // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(32, callvalue)
         address 0x44 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, address(this))
         0x80 0x64 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, 0x80) 4 + 32 + 32 + 32, 0x80 because bytes is dynamic
@@ -374,7 +361,7 @@
         call pop                                    // [*pair_swap_args]
                                                     // [pair_address, value, argoffset, argsize, retoffset, retsize] !expanded pair_swap_args
 
-        // setup calldata for swap(0, otherTokenOut, address(this), "")
+        // setup calldata for swap(amountOut0, amountOut1, address(this), "")
         mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         0x04 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
         0x24 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
@@ -428,6 +415,7 @@
         gas
         call pop
 
+        // setup calldata for swap(0, otherTokenOut, address(this), "")
         [V2_SWAP_SIG_32] 0x00 mstore
         0x00 0x04 mstore
         0x00 0x24 mstore
@@ -466,8 +454,9 @@
         chainid calldataload                        
         returndatasize byte                         // [memOffset, token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
         mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(memOffset, token_amount_in)
-
         dup1 0x04 mstore                            // mstore(0x04, pair_address)
+
+        // call input token transfer(to,value)
         returndatasize                              // [retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
         returndatasize                              // [retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
         0x44                                        // [argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
@@ -482,6 +471,8 @@
         [V2_SWAP_SIG_4] 0x24 mstore                       // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0x24, V2_SWAP_SIG_32)
         address 0x84 mstore
         0x80 0xa4 mstore
+
+        // call swap
         gas
         call
         0x2f
@@ -511,6 +502,8 @@
         chainid byte
         mstore
         dup1 0x04 mstore
+
+        // call input token transfer(to,value)
         0x00
         dup1
         0x44
