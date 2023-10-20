@@ -43,8 +43,21 @@ impl SandwichMaker {
             nonce,
         }
     }
-}
 
+    pub async fn update_searcher_nonce(&self) {
+        let mut nonce = self.nonce.write().await;
+        let client = utils::create_websocket_client().await.unwrap();
+
+        if let Ok(n) = client
+            .get_transaction_count(self.searcher_wallet.address(), None)
+            .await
+        {
+            *nonce = n;
+        } else {
+            panic!("Failed to update searcher wallet nonce...");
+        };
+    }
+}
 
 /// Encoded swap value used by other token
 pub struct EncodedSwapValue {
@@ -68,8 +81,6 @@ impl EncodedSwapValue {
         self.encoded_value * (U256::from(2).pow(U256::from(8) * self.byte_shift))
     }
 }
-
-
 
 /// Return the divisor used for encoding call value (weth amount)
 pub fn get_weth_encode_divisor() -> U256 {

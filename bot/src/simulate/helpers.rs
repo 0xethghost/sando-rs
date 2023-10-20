@@ -286,6 +286,25 @@ pub fn get_balance_of_evm(
     }
 }
 
+pub fn get_sandwich_weth_balance_evm(
+    next_block: &BlockInfo,
+    fork_db: ForkDB
+) -> Result<U256, SimulationError> {
+    let mut evm = revm::EVM::new();
+    evm.database(fork_db);
+    setup_block_state(&mut evm, &next_block);
+    let weth = utils::constants::get_weth_address();
+    let sandwich_contract = get_sandwich_contract_address();
+
+    get_balance_of_evm(
+        weth,
+        sandwich_contract,
+        next_block,
+        &mut evm,
+    )
+}
+
+
 // Converts access list from revm to ethers type
 //
 // Arguments:

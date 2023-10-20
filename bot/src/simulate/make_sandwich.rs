@@ -236,11 +236,10 @@ fn sanity_check(
     let mut evm = revm::EVM::new();
     evm.database(fork_db);
     setup_block_state(&mut evm, &next_block);
-
+    
     let searcher = dotenv::get_searcher_wallet().address();
     let sandwich_contract = dotenv::get_sandwich_contract_address();
     let pool_variant = ingredients.target_pool.pool_variant;
-
 
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    FRONTRUN TRANSACTION                    */

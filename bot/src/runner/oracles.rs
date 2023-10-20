@@ -178,8 +178,16 @@ pub fn start_mega_sandwich_oracle(
             } else {
                 panic!("Failed to create new block stream");
             };
+            use std::time::Instant;
+            let mut now = Instant::now();
 
             while let Some(block) = block_stream.next().await {
+                let elpased = now.elapsed();
+                log::info!(
+                    "{}",
+                    format!("[{:?}] Block time elapsed {:?}", block.number, elpased)
+                );
+                now = Instant::now();
                 // clear all recipes
                 // enchanement: don't do this step but keep recipes because they can be used in future
                 {
@@ -187,8 +195,8 @@ pub fn start_mega_sandwich_oracle(
                     bundle_sender_guard.pending_sandwiches.clear();
                 } // lock removed here
 
-                // 10.5 seconds from when new block was detected, caluclate mega sandwich
-                thread::sleep(Duration::from_millis(10_500));
+                // 9.5 seconds from when new block was detected, caluclate mega sandwich
+                thread::sleep(Duration::from_millis(9_500));
                 let next_block_info = BlockInfo::find_next_block_info(block);
                 {
                     bundle_sender
