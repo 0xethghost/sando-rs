@@ -5,6 +5,7 @@ use crate::prelude::fork_factory::ForkFactory;
 use crate::prelude::sandwich_types::RawIngredients;
 use crate::prelude::{make_sandwich, Dex, Pool};
 use crate::rpc_extensions;
+use crate::simulate::helpers::get_sandwich_weth_balance_evm;
 use crate::types::BlockOracle;
 use crate::utils;
 use crate::utils::tx_builder::SandwichMaker;
@@ -105,14 +106,8 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
-            // match self.process_tx(victim_tx).await {
-            //     Some(_)=>{},
-            //     None=>{
-            //         continue;
-            //     }
-            // };
-            use std::time::Instant;
-            let now = Instant::now();
+            // use std::time::Instant;
+            // let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) => continue,
@@ -122,10 +117,7 @@ impl Bot {
                 (*read_lock).clone()
             };
             let all_pools = &self.all_pools;
-            let sandwich_balance = {
-                let read_lock = self.sandwich_state.weth_balance.read().await;
-                (*read_lock).clone()
-            };
+
             // ignore txs that we can't include in next block
             // enhancement: simulate all txs, store result, and use result when tx can included
             if victim_tx.max_fee_per_gas.unwrap_or(U256::zero()) < block_oracle.next_block.base_fee
@@ -179,7 +171,21 @@ impl Bot {
                 .unwrap();
             let fork_factory =
                 ForkFactory::new_sandbox_factory(client.clone(), initial_db, fork_block);
+            // update sandwich weth balance
+            let fork_db = fork_factory.new_sandbox_fork();
+            let sandwich_balance =
+                get_sandwich_weth_balance_evm(&block_oracle.next_block, fork_db).unwrap();
 
+            self.sandwich_state
+                .update_weth_balance(sandwich_balance)
+                .await;
+
+            self.sandwich_maker.update_searcher_nonce().await;
+
+            // let sandwich_balance = {
+            //     let read_lock = self.sandwich_state.weth_balance.read().await;
+            //     (*read_lock).clone()
+            // };
             // search for opportunities in all pools that the tx touches (concurrently)
             for sandwichable_pool in sandwichable_pools {
                 if !sandwichable_pool.is_weth_input {
@@ -187,10 +193,10 @@ impl Bot {
                     // log::info!("{:?} [weth_is_output]", victim_tx.hash);
                     continue;
                 } else {
-                    log::info!(
-                        "{}",
-                        format!("{:?} [weth_is_input]", victim_tx.hash).green()
-                    );
+                    // log::info!(
+                    //     "{}",
+                    //     format!("{:?} [weth_is_input]", victim_tx.hash).green()
+                    // );
                 }
 
                 // prepare variables for new thread
@@ -198,7 +204,7 @@ impl Bot {
                 let sandwichable_pool = sandwichable_pool.clone();
                 let mut fork_factory = fork_factory.clone();
                 let block_oracle = block_oracle.clone();
-                let sandwich_state = self.sandwich_state.clone();
+                // let sandwich_state = self.sandwich_state.clone();
                 let sandwich_maker = self.sandwich_maker.clone();
                 let bundle_sender = self.bundle_sender.clone();
                 let state_diffs = state_diffs.clone();
@@ -224,7 +230,7 @@ impl Bot {
                     };
 
                     // find optimal input to sandwich tx
-                    let mut optimal_sandwich = match make_sandwich::create_optimal_sandwich(
+                    let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
                         &raw_ingredients,
                         sandwich_balance,
                         &block_oracle.next_block,
@@ -234,33 +240,33 @@ impl Bot {
                     .await
                     {
                         Ok(optimal) => optimal,
-                        Err(e) => {
-                            log::info!(
-                                "{}",
-                                format!("{:?} sim failed due to {:?}", &victim_hash, e).yellow()
-                            );
+                        Err(_) => {
+                            // log::info!(
+                            //     "{}",
+                            //     format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
+                            // );
                             return;
                         }
                     };
 
-                    // check if has dust
-                    let other_token = if optimal_sandwich.target_pool.token_0
-                        != utils::constants::get_weth_address()
-                    {
-                        optimal_sandwich.target_pool.token_0
-                    } else {
-                        optimal_sandwich.target_pool.token_1
-                    };
+                    // // check if has dust
+                    // let other_token = if optimal_sandwich.target_pool.token_0
+                    //     != utils::constants::get_weth_address()
+                    // {
+                    //     optimal_sandwich.target_pool.token_0
+                    // } else {
+                    //     optimal_sandwich.target_pool.token_1
+                    // };
 
-                    if sandwich_state.has_dust(&other_token).await {
-                        optimal_sandwich.has_dust = true;
-                    }
+                    // if sandwich_state.has_dust(&other_token).await {
+                    //     optimal_sandwich.has_dust = true;
+                    // }
 
                     // spawn thread to send tx to builders
                     let optimal_sandwich = optimal_sandwich.clone();
                     let optimal_sandwich_two = optimal_sandwich.clone();
                     let sandwich_maker = sandwich_maker.clone();
-                    let sandwich_state = sandwich_state.clone();
+                    // let sandwich_state = sandwich_state.clone();
 
                     if optimal_sandwich.revenue > U256::zero() {
                         tokio::spawn(async move {
@@ -268,7 +274,7 @@ impl Bot {
                                 &optimal_sandwich,
                                 block_oracle.next_block,
                                 sandwich_maker,
-                                sandwich_state.clone(),
+                                // sandwich_state.clone(),
                             )
                             .await
                             {
@@ -286,8 +292,8 @@ impl Bot {
                                 }
                             };
                         });
-                        let elpased = now.elapsed();
-                        log::info!("{}", format!("{:?} Time elapsed {:?}", &victim_hash, elpased));
+                        // let elpased = now.elapsed();
+                        // log::info!("{}", format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased));
                     }
 
                     // spawn thread to add tx for mega sandwich calculation
@@ -305,192 +311,4 @@ impl Bot {
 
         Ok(())
     }
-
-    // async fn process_tx(&self, mut victim_tx:Transaction) -> Option<()> {
-    //     use std::time::Instant;
-    //     let now = Instant::now();
-    //     let client = utils::create_websocket_client().await.unwrap();
-    //     let block_oracle = {
-    //         let read_lock = self.latest_block_oracle.read().await;
-    //         (*read_lock).clone()
-    //     };
-    //     let all_pools = &self.all_pools;
-    //     let sandwich_balance = {
-    //         let read_lock = self.sandwich_state.weth_balance.read().await;
-    //         (*read_lock).clone()
-    //     };
-    //     // ignore txs that we can't include in next block
-    //     // enhancement: simulate all txs, store result, and use result when tx can included
-    //     if victim_tx.max_fee_per_gas.unwrap_or(U256::zero()) < block_oracle.next_block.base_fee {
-    //         log::info!("{}", format!("{:?} mf<nbf", victim_tx.hash).cyan());
-    //         return None;
-    //     }
-
-    //     // recover from field from vrs (ECDSA)
-    //     // enhancement: expensive operation, can avoid by modding rpc to share `from` field
-    //     if let Ok(from) = victim_tx.recover_from() {
-    //         victim_tx.from = from;
-    //     } else {
-    //         log::error!(
-    //             "{}",
-    //             format!("{:?} ecdsa recovery failed", victim_tx.hash).red()
-    //         );
-    //         return None;
-    //     };
-
-    //     // get all state diffs that this tx produces
-    //     let state_diffs = if let Some(sd) = utils::state_diff::get_from_txs(
-    //         &self.client,
-    //         &vec![victim_tx.clone()],
-    //         BlockNumber::Number(block_oracle.latest_block.number),
-    //     )
-    //     .await
-    //     {
-    //         sd
-    //     } else {
-    //         log::info!("{:?}", victim_tx.hash);
-    //         return None;
-    //     };
-
-    //     // if tx has statediff on pool addr then record it in `sandwichable_pools`
-    //     let sandwichable_pools =
-    //         if let Some(sp) = utils::state_diff::extract_pools(&state_diffs, &all_pools) {
-    //             sp
-    //         } else {
-    //             log::info!("{:?}", victim_tx.hash);
-    //             return None;
-    //         };
-
-    //     let fork_block = Some(BlockId::Number(BlockNumber::Number(
-    //         block_oracle.next_block.number,
-    //     )));
-
-    //     // create evm simulation handler by setting up `fork_factory`
-    //     let initial_db = utils::state_diff::to_cache_db(&state_diffs, fork_block, &self.client)
-    //         .await
-    //         .unwrap();
-    //     let fork_factory = ForkFactory::new_sandbox_factory(client.clone(), initial_db, fork_block);
-    //     let elpased = now.elapsed();
-    //     log::info!("{}", format!("Time elapsed {:?}", elpased));
-    //     // search for opportunities in all pools that the tx touches (concurrently)
-    //     for sandwichable_pool in sandwichable_pools {
-    //         if !sandwichable_pool.is_weth_input {
-    //             // enhancement: increase opportunities by handling swaps in pools with stables
-    //             log::info!("{:?} [weth_is_output]", victim_tx.hash);
-    //             continue;
-    //         } else {
-    //             log::info!(
-    //                 "{}",
-    //                 format!("{:?} [weth_is_input]", victim_tx.hash).green()
-    //             );
-    //         }
-
-    //         // prepare variables for new thread
-    //         let victim_tx = victim_tx.clone();
-    //         let sandwichable_pool = sandwichable_pool.clone();
-    //         let mut fork_factory = fork_factory.clone();
-    //         let block_oracle = block_oracle.clone();
-    //         let sandwich_state = self.sandwich_state.clone();
-    //         let sandwich_maker = self.sandwich_maker.clone();
-    //         let bundle_sender = self.bundle_sender.clone();
-    //         let state_diffs = state_diffs.clone();
-
-    //         tokio::spawn(async move {
-    //             // enhancement: increase opportunities by handling swaps in pools with stables
-    //             let input_token = utils::constants::get_weth_address();
-    //             let victim_hash = victim_tx.hash;
-
-    //             // variables used when searching for opportunity
-    //             let raw_ingredients = if let Ok(data) = RawIngredients::new(
-    //                 &sandwichable_pool.pool,
-    //                 vec![victim_tx],
-    //                 input_token,
-    //                 state_diffs,
-    //             )
-    //             .await
-    //             {
-    //                 data
-    //             } else {
-    //                 log::error!("Failed to create raw ingredients for: {:?}", &victim_hash);
-    //                 return;
-    //             };
-
-    //             // find optimal input to sandwich tx
-    //             let mut optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-    //                 &raw_ingredients,
-    //                 sandwich_balance,
-    //                 &block_oracle.next_block,
-    //                 &mut fork_factory,
-    //                 &sandwich_maker,
-    //             )
-    //             .await
-    //             {
-    //                 Ok(optimal) => optimal,
-    //                 Err(e) => {
-    //                     log::info!(
-    //                         "{}",
-    //                         format!("{:?} sim failed due to {:?}", &victim_hash, e).yellow()
-    //                     );
-    //                     return;
-    //                 }
-    //             };
-
-    //             // check if has dust
-    //             let other_token = if optimal_sandwich.target_pool.token_0
-    //                 != utils::constants::get_weth_address()
-    //             {
-    //                 optimal_sandwich.target_pool.token_0
-    //             } else {
-    //                 optimal_sandwich.target_pool.token_1
-    //             };
-
-    //             if sandwich_state.has_dust(&other_token).await {
-    //                 optimal_sandwich.has_dust = true;
-    //             }
-
-    //             // spawn thread to send tx to builders
-    //             let optimal_sandwich = optimal_sandwich.clone();
-    //             let optimal_sandwich_two = optimal_sandwich.clone();
-    //             let sandwich_maker = sandwich_maker.clone();
-    //             let sandwich_state = sandwich_state.clone();
-
-    //             if optimal_sandwich.revenue > U256::zero() {
-    //                 tokio::spawn(async move {
-    //                     match bundle_sender::send_bundle(
-    //                         &optimal_sandwich,
-    //                         block_oracle.next_block,
-    //                         sandwich_maker,
-    //                         sandwich_state.clone(),
-    //                     )
-    //                     .await
-    //                     {
-    //                         Ok(_) => { /* all reporting already done inside of send_bundle */ }
-    //                         Err(e) => {
-    //                             log::info!(
-    //                                 "{}",
-    //                                 format!(
-    //                                     "{:?} failed to send bundle, due to {:?}",
-    //                                     optimal_sandwich.print_meats(),
-    //                                     e
-    //                                 )
-    //                                 .bright_magenta()
-    //                             );
-    //                         }
-    //                     };
-    //                 });
-    //             }
-
-    //             // spawn thread to add tx for mega sandwich calculation
-    //             let bundle_sender = bundle_sender.clone();
-    //             tokio::spawn(async move {
-    //                 bundle_sender
-    //                     .write()
-    //                     .await
-    //                     .add_recipe(optimal_sandwich_two)
-    //                     .await;
-    //             });
-    //         });
-    //     }
-    //     Some(())
-    // }
 }

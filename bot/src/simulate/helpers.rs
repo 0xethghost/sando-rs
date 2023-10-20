@@ -1,6 +1,7 @@
 use crate::prelude::fork_db::ForkDB;
 use crate::prelude::fork_factory::ForkFactory;
 use crate::types::{BlockInfo, SimulationError};
+use crate::utils::constants::*;
 use crate::utils::dotenv::{get_sandwich_contract_address, get_searcher_wallet};
 use crate::utils::{self, constants};
 use ethers::abi::{self, parse_abi, ParamType};
@@ -135,7 +136,7 @@ pub fn setup_block_state(evm: &mut EVM<ForkDB>, next_block: &BlockInfo) {
 // Returns:
 // Ok(U256): amount out
 // Err(SimulationError): if error during caluclation
-pub fn get_amount_out_evm(
+pub fn get_amount_out_evm_v2(
     amount_in: U256,
     target_pool: Address,
     token_in: Address,
@@ -186,6 +187,56 @@ pub fn get_amount_out_evm(
     Ok(amount_out)
 }
 
+pub fn get_amount_out_evm_v3(
+    amount_in: U256,
+    token_in: Address,
+    token_out: Address,
+    swap_fee: U256,
+    evm: &mut EVM<ForkDB>,
+) -> Result<U256, SimulationError> {
+    // get liquidity
+    let quoter = get_uniswap_v3_quoter_address();
+    let quoter_contract = BaseContract::from(
+        parse_abi(&["function quoteExactInputSingle(address, address, uint24, uint256, uint160) external returns (uint256)"]).unwrap(),
+    );
+    let is_zero_for_one = token_in < token_out;
+    let sqrt_price_limit_x96 = get_sqrt_price_limit_x96(is_zero_for_one);
+    evm.env.tx.transact_to = TransactTo::Call(quoter.into());
+    evm.env.tx.caller = get_eth_dev().0.into();
+    evm.env.tx.value = rU256::ZERO;
+    evm.env.tx.data = quoter_contract
+        .encode(
+            "quoteExactInputSingle",
+            (
+                token_in,
+                token_out,
+                swap_fee,
+                amount_in,
+                sqrt_price_limit_x96,
+            ),
+        )
+        .unwrap()
+        .0;
+
+    let result = match evm.transact_ref() {
+        Ok(result) => result.result,
+        Err(e) => return Err(SimulationError::EvmError(e)),
+    };
+    let output: Bytes = match result {
+        ExecutionResult::Success { output, .. } => match output {
+            Output::Call(o) => o.into(),
+            Output::Create(o, _) => o.into(),
+        },
+        ExecutionResult::Revert { output, .. } => return Err(SimulationError::EvmReverted(output)),
+        ExecutionResult::Halt { reason, .. } => return Err(SimulationError::EvmHalted(reason)),
+    };
+
+    match quoter_contract.decode_output("quoteExactInputSingle", &output) {
+        Ok(amount_out) => return Ok(amount_out),
+        Err(e) => return Err(SimulationError::AbiError(e)),
+    }
+}
+
 // Get token balance
 //
 // Arguments:
@@ -234,6 +285,25 @@ pub fn get_balance_of_evm(
         Err(e) => return Err(SimulationError::AbiError(e)),
     }
 }
+
+pub fn get_sandwich_weth_balance_evm(
+    next_block: &BlockInfo,
+    fork_db: ForkDB
+) -> Result<U256, SimulationError> {
+    let mut evm = revm::EVM::new();
+    evm.database(fork_db);
+    setup_block_state(&mut evm, &next_block);
+    let weth = utils::constants::get_weth_address();
+    let sandwich_contract = get_sandwich_contract_address();
+
+    get_balance_of_evm(
+        weth,
+        sandwich_contract,
+        next_block,
+        &mut evm,
+    )
+}
+
 
 // Converts access list from revm to ethers type
 //

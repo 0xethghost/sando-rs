@@ -19,8 +19,8 @@ contract Withdraw is Script {
         uint amountWithdraw = 0.35 ether;
         bytes memory payload = abi.encodePacked(withdrawLabel, amountWithdraw);
         console.logBytes(payload);
-        uint256 helperPrivateKey = vm.envUint("HELPER_PRIVATE_KEY");
-        vm.broadcast(helperPrivateKey);
+        uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
+        vm.broadcast(searcherPrivateKey);
         (bool result, ) = sandwich.call(payload);
         require(result, "Call reverted");
     }
@@ -34,17 +34,23 @@ contract Withdraw is Script {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[13] memory functionNames = [
-            "v2_output0",
-            "v2_input0",
-            "v2_output1",
-            "v2_input1",
-            "v3_output1_big",
-            "v3_output0_big",
-            "v3_output1_small",
-            "v3_output0_small",
+        string[19] memory functionNames = [
+            "v2_input_single",
+            "v2_output0_single",
+            "v2_output1_single",
             "v3_input0",
             "v3_input1",
+            "v3_output0",
+            "v3_output1",
+            "v2_input_multi_first",
+            "v2_input_multi_next",
+            "v2_output_multi_first",
+            "v2_output_multi_next",
+            "v3_multi_pre",
+            "v3_input0_multi",
+            "v3_input1_multi",
+            "v3_output0_multi",
+            "v3_output1_multi",
             "seppuku",
             "recoverWeth",
             "depositWeth"

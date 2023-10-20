@@ -42,27 +42,27 @@ impl BotState {
         })
     }
 
-    // Check if contract has dust for specific token
-    //
-    // Arguments:
-    // * `&self`: refernce to `BotState` instance
-    // * `token`: token to check dust for
-    //
-    // Returns:
-    // bool: true if contract has dust for token, false otherwise
-    pub async fn has_dust(&self, token: &Address) -> bool {
-        self.token_dust.read().await.contains(token)
-    }
+    // // Check if contract has dust for specific token
+    // //
+    // // Arguments:
+    // // * `&self`: refernce to `BotState` instance
+    // // * `token`: token to check dust for
+    // //
+    // // Returns:
+    // // bool: true if contract has dust for token, false otherwise
+    // pub async fn has_dust(&self, token: &Address) -> bool {
+    //     self.token_dust.read().await.contains(token)
+    // }
 
-    // Add dust to contract
-    //
-    // Arguments:
-    // * `&self`: reference to `BotState` instance
-    // * `token`: token to add dust for
-    pub async fn add_dust(&self, token: Address) {
-        let mut dust = self.token_dust.write().await;
-        dust.push(token);
-    }
+    // // Add dust to contract
+    // //
+    // // Arguments:
+    // // * `&self`: reference to `BotState` instance
+    // // * `token`: token to add dust for
+    // pub async fn add_dust(&self, token: Address) {
+    //     let mut dust = self.token_dust.write().await;
+    //     dust.push(token);
+    // }
 
     // Update the WETH balance of the contract
     //
@@ -70,9 +70,9 @@ impl BotState {
     // * `&self`: reference to `BotState` instance
     //
     // Returns: nothing
-    pub async fn update_weth_balance(&self, value_to_add: U256) {
+    pub async fn update_weth_balance(&self, new_value: U256) {
         let mut lock = self.weth_balance.write().await;
-        *lock += value_to_add;
+        *lock = new_value;
     }
 
     // Find dust that bot has collected from a specific block onwards

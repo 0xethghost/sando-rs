@@ -17,7 +17,7 @@ pub struct OptimalRecipe {
     pub meats: Vec<Transaction>,
     pub target_pool: Pool,
     pub revenue: U256,
-    pub has_dust: bool,
+    // pub has_dust: bool,
     pub state_diffs: BTreeMap<H160, AccountDiff>,
 }
 
@@ -49,15 +49,15 @@ impl OptimalRecipe {
             meats,
             revenue,
             target_pool,
-            has_dust: false,
+            // has_dust: false,
             state_diffs,
         }
     }
 
-    // Does contract have dust for the target token associated with this opportunity
-    pub fn set_has_dust(&mut self, dust: bool) {
-        self.has_dust = dust;
-    }
+    // // Does contract have dust for the target token associated with this opportunity
+    // pub fn set_has_dust(&mut self, dust: bool) {
+    //     self.has_dust = dust;
+    // }
 
     // Used for logging
     pub fn print_meats_new_line(&self) -> String {
