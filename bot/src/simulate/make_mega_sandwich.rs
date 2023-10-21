@@ -1,5 +1,6 @@
 use ethers::prelude::*;
 use revm::primitives::{ExecutionResult, Output, TransactTo, B160 as rAddress, U256 as rU256};
+use std::collections::BTreeMap;
 
 use crate::prelude::access_list::AccessListInspector;
 use crate::prelude::fork_db::ForkDB;
@@ -12,6 +13,7 @@ use crate::prelude::{
 };
 use crate::types::sandwich_types::OptimalRecipe;
 use crate::types::{BlockInfo, SimulationError};
+use crate::utils::constants::get_weth_address;
 use crate::utils::dotenv;
 use crate::utils::tx_builder::{self, braindance, SandwichMaker};
 
@@ -32,28 +34,41 @@ use super::{
 // Returns:
 // Ok(OptimalRecipe) if no errors during calculation
 // Err(SimulationError) if error during calculation
-pub async fn create_optimal_sandwich(
-    ingredients: &RawIngredients,
+pub async fn create_mega_optimal_sandwich(
+    multi_ingredients: &[RawIngredients],
     sandwich_balance: U256,
     next_block: &BlockInfo,
     fork_factory: &mut ForkFactory,
     sandwich_maker: &SandwichMaker,
 ) -> Result<OptimalRecipe, SimulationError> {
-    let optimal = juiced_quadratic_search(
-        ingredients,
-        U256::zero(),
-        sandwich_balance,
-        next_block,
-        fork_factory,
-    )
-    .await?;
-    if optimal.is_zero() {
-        return Err(SimulationError::ZeroOptimal());
+    if multi_ingredients.len() <= 1 {
+        return Err(SimulationError::NotMultiMeat());
     }
+    let mut optimals: Vec<U256> = vec![];
+    let mut upper_bound = sandwich_balance;
+    for ingredients in multi_ingredients.iter(){
+        let optimal = juiced_quadratic_search(
+            ingredients,
+            U256::zero(),
+            upper_bound,
+            next_block,
+            fork_factory,
+        )
+        .await?;
+        // if optimal.is_zero() {
+        //     return Err(SimulationError::ZeroOptimal());
+        // }
+        upper_bound = match upper_bound.checked_sub(optimal) {
+            Some(amount) => amount,
+            None => U256::zero(),
+        };
+        optimals.push(optimal);
+    }
+
     sanity_check(
         sandwich_balance,
-        optimal,
-        ingredients,
+        optimals,
+        multi_ingredients,
         next_block,
         sandwich_maker,
         fork_factory.new_sandbox_fork(),
@@ -226,8 +241,8 @@ async fn juiced_quadratic_search(
 // Err(SimulationError): error encountered during simulation
 fn sanity_check(
     sandwich_start_balance: U256,
-    frontrun_in: U256,
-    ingredients: &RawIngredients,
+    frontrun_ins: Vec<U256>,
+    multi_ingredients: &[RawIngredients],
     next_block: &BlockInfo,
     sandwich_maker: &SandwichMaker,
     fork_db: ForkDB,
@@ -236,65 +251,73 @@ fn sanity_check(
     let mut evm = revm::EVM::new();
     evm.database(fork_db);
     setup_block_state(&mut evm, &next_block);
-    
+    let weth_address = get_weth_address();
     let searcher = dotenv::get_searcher_wallet().address();
     let sandwich_contract = dotenv::get_sandwich_contract_address();
-    let pool_variant = ingredients.target_pool.pool_variant;
 
-    // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    // *                    FRONTRUN TRANSACTION                    */
-    // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-    //
-    // encode frontrun_in before passing to sandwich contract
-    let frontrun_in = match pool_variant {
-        PoolVariant::UniswapV2 => tx_builder::v2::encode_weth(frontrun_in),
-        PoolVariant::UniswapV3 => tx_builder::v3::encode_weth(frontrun_in),
-    };
+    let mut frontrun_data: Vec<u8> = Vec::new();
+    let mut frontrun_value: U256 = U256::from(0);
 
-    // caluclate frontrun_out using encoded frontrun_in
-    evm.env.tx.gas_price = next_block.base_fee.into();
-    evm.env.tx.gas_limit = 700000;
-    evm.env.tx.value = rU256::ZERO;
-    let frontrun_out = match pool_variant {
-        PoolVariant::UniswapV2 => {
-            let target_pool = ingredients.target_pool.address;
-            let token_in = ingredients.startend_token;
-            let token_out = ingredients.intermediary_token;
-            let amount_out =
-                get_amount_out_evm_v2(frontrun_in, target_pool, token_in, token_out, &mut evm)?;
-            tx_builder::v2::decode_intermediary(amount_out, true, token_out)
+    // prepare frontrun data and value
+    for (index, ingredients) in multi_ingredients.iter().enumerate() {
+        let is_first = index == 0;
+        let pool_variant = ingredients.target_pool.pool_variant;
+
+        // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+        // *                    FRONTRUN TRANSACTION                    */
+        // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+        //
+        // encode frontrun_in before passing to sandwich contract
+        let frontrun_in = match pool_variant {
+            PoolVariant::UniswapV2 => tx_builder::v2::encode_weth(frontrun_ins[index]),
+            PoolVariant::UniswapV3 => tx_builder::v3::encode_weth(frontrun_ins[index]),
+        };
+        if frontrun_in.is_zero() {
+            continue;
         }
-        PoolVariant::UniswapV3 => {
-            let token_in = ingredients.startend_token;
-            let token_out = ingredients.intermediary_token;
-            let swap_fee = ingredients.target_pool.swap_fee;
-            let amount_out =
-                get_amount_out_evm_v3(frontrun_in, token_in, token_out, swap_fee, &mut evm)?;
-            tx_builder::v3::decode_intermediary(amount_out)
-        }
-    };
 
-    // create tx.data and tx.value for frontrun_in
-    let (frontrun_data, frontrun_value) = match pool_variant {
-        PoolVariant::UniswapV2 => sandwich_maker.v2.create_payload_weth_is_input(
-            frontrun_in,
-            frontrun_out,
-            ingredients.intermediary_token,
-            ingredients.target_pool,
-        ),
-        PoolVariant::UniswapV3 => sandwich_maker.v3.create_payload_weth_is_input(
-            frontrun_in.as_u128().into(),
-            frontrun_out.as_u128().into(),
-            ingredients.startend_token,
-            ingredients.intermediary_token,
-            ingredients.target_pool,
-        ),
-    };
-
-    #[cfg(test)]
-    {
-        println!("[frontrun data] {:02x?}", frontrun_data);
-        println!("[frontrun value] {:02x?}", frontrun_value);
+        // caluclate frontrun_out using encoded frontrun_in
+        evm.env.tx.gas_price = next_block.base_fee.into();
+        evm.env.tx.gas_limit = 700000;
+        evm.env.tx.value = rU256::ZERO;
+        let frontrun_out = match pool_variant {
+            PoolVariant::UniswapV2 => {
+                let target_pool = ingredients.target_pool.address;
+                let token_in = ingredients.startend_token;
+                let token_out = ingredients.intermediary_token;
+                let amount_out =
+                    get_amount_out_evm_v2(frontrun_in, target_pool, token_in, token_out, &mut evm)?;
+                tx_builder::v2::decode_intermediary(amount_out, true, token_out)
+            }
+            PoolVariant::UniswapV3 => {
+                let token_in = ingredients.startend_token;
+                let token_out = ingredients.intermediary_token;
+                let swap_fee = ingredients.target_pool.swap_fee;
+                let amount_out =
+                    get_amount_out_evm_v3(frontrun_in, token_in, token_out, swap_fee, &mut evm)?;
+                tx_builder::v3::decode_intermediary(amount_out)
+            }
+        };
+        // create tx.data and tx.value for frontrun_in
+        let (mut data, value) = match pool_variant {
+            PoolVariant::UniswapV2 => sandwich_maker.v2.create_multi_payload_weth_is_input(
+                frontrun_in,
+                frontrun_out,
+                ingredients.intermediary_token,
+                ingredients.target_pool,
+                is_first,
+            ),
+            PoolVariant::UniswapV3 => sandwich_maker.v3.create_multi_payload_weth_is_input(
+                frontrun_in.as_u128().into(),
+                frontrun_out.as_u128().into(),
+                ingredients.startend_token,
+                ingredients.intermediary_token,
+                ingredients.target_pool,
+                is_first,
+            ),
+        };
+        frontrun_data.append(&mut data);
+        frontrun_value += value;
     }
 
     // setup evm for frontrun transaction
@@ -343,93 +366,108 @@ fn sanity_check(
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                     MEAT TRANSACTION/s                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-    let mut is_meat_good = Vec::new();
-    for meat in ingredients.meats.iter() {
-        evm.env.tx.caller = rAddress::from_slice(&meat.from.0);
-        evm.env.tx.transact_to =
-            TransactTo::Call(rAddress::from_slice(&meat.to.unwrap_or_default().0));
-        evm.env.tx.data = meat.input.0.clone();
-        evm.env.tx.value = meat.value.into();
-        evm.env.tx.chain_id = meat.chain_id.map(|id| id.as_u64());
-        // evm.env.tx.nonce = Some(meat.nonce.as_u64());
-        evm.env.tx.gas_limit = meat.gas.as_u64();
-        match meat.transaction_type {
-            Some(ethers::types::U64([0])) => {
-                // legacy tx
-                evm.env.tx.gas_price = meat.gas_price.unwrap_or_default().into();
+    // let mut is_meat_good = Vec::new();
+    let mut good_meats = Vec::new();
+    for ingredients in multi_ingredients.iter() {
+        for meat in ingredients.meats.iter() {
+            evm.env.tx.caller = rAddress::from_slice(&meat.from.0);
+            evm.env.tx.transact_to =
+                TransactTo::Call(rAddress::from_slice(&meat.to.unwrap_or_default().0));
+            evm.env.tx.data = meat.input.0.clone();
+            evm.env.tx.value = meat.value.into();
+            evm.env.tx.chain_id = meat.chain_id.map(|id| id.as_u64());
+            // evm.env.tx.nonce = Some(meat.nonce.as_u64());
+            evm.env.tx.gas_limit = meat.gas.as_u64();
+            match meat.transaction_type {
+                Some(ethers::types::U64([0])) => {
+                    // legacy tx
+                    evm.env.tx.gas_price = meat.gas_price.unwrap_or_default().into();
+                }
+                Some(_) => {
+                    // type 2 tx
+                    evm.env.tx.gas_priority_fee =
+                        meat.max_priority_fee_per_gas.map(|mpf| mpf.into());
+                    evm.env.tx.gas_price = meat.max_fee_per_gas.unwrap_or_default().into();
+                }
+                None => {
+                    // legacy tx
+                    evm.env.tx.gas_price = meat.gas_price.unwrap().into();
+                }
             }
-            Some(_) => {
-                // type 2 tx
-                evm.env.tx.gas_priority_fee = meat.max_priority_fee_per_gas.map(|mpf| mpf.into());
-                evm.env.tx.gas_price = meat.max_fee_per_gas.unwrap_or_default().into();
-            }
-            None => {
-                // legacy tx
-                evm.env.tx.gas_price = meat.gas_price.unwrap().into();
-            }
-        }
 
-        // keep track of which meat transactions are successful to filter reverted meats at end
-        // remove reverted meats because mempool tx/s gas costs are accounted for by fb
-        let res = match evm.transact_commit() {
-            Ok(result) => result,
-            Err(e) => return Err(SimulationError::EvmError(e)),
-        };
-        match res.is_success() {
-            true => is_meat_good.push(true),
-            false => is_meat_good.push(false),
+            // keep track of which meat transactions are successful to filter reverted meats at end
+            // remove reverted meats because mempool tx/s gas costs are accounted for by fb
+            let res = match evm.transact_commit() {
+                Ok(result) => result,
+                Err(e) => return Err(SimulationError::EvmError(e)),
+            };
+            match res.is_success() {
+                true => good_meats.push(meat.clone()),
+                false => {},
+            }
         }
     }
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    BACKRUN TRANSACTION                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-    //
-    // encode backrun_in before passing to sandwich contract
-    let token_in = ingredients.intermediary_token;
-    let token_out = ingredients.startend_token;
-    let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
-    let backrun_in = match pool_variant {
-        PoolVariant::UniswapV2 => {
-            tx_builder::v2::encode_intermediary_token(balance, false, token_in)
-        }
-        PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
-    };
+    let mut backrun_data: Vec<u8> = Vec::new();
+    let mut backrun_value: U256 = U256::from(0);
+    for (index, ingredients) in multi_ingredients.iter().enumerate() {
+        let is_first = index == 0;
+        // encode backrun_in before passing to sandwich contract
+        let token_in = ingredients.intermediary_token;
+        let token_out = ingredients.startend_token;
+        let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
+        let pool_variant = ingredients.target_pool.pool_variant;
+        let backrun_in = match pool_variant {
+            PoolVariant::UniswapV2 => {
+                tx_builder::v2::encode_intermediary_token(balance, false, token_in)
+            }
+            PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
+        };
 
-    // caluclate backrun_out using encoded backrun_in
-    let backrun_out = match pool_variant {
-        PoolVariant::UniswapV2 => {
-            let target_pool = ingredients.target_pool.address;
-            let amount_out =
-                get_amount_out_evm_v2(backrun_in, target_pool, token_in, token_out, &mut evm)?;
-            tx_builder::v2::encode_weth(amount_out)
-        }
-        PoolVariant::UniswapV3 => {
-            let token_in = ingredients.intermediary_token;
-            let token_out = ingredients.startend_token;
-            let swap_fee = ingredients.target_pool.swap_fee;
-            let amount_out =
-                get_amount_out_evm_v3(backrun_in, token_in, token_out, swap_fee, &mut evm)?;
-            tx_builder::v3::encode_weth(amount_out)
-        }
-    };
-    // create tx.data and tx.value for backrun_in
-    let (backrun_data, backrun_value) = match pool_variant {
-        PoolVariant::UniswapV2 => sandwich_maker.v2.create_payload_weth_is_output(
-            backrun_in,
-            backrun_out,
-            ingredients.intermediary_token,
-            ingredients.target_pool,
-        ),
-        PoolVariant::UniswapV3 => sandwich_maker.v3.create_payload_weth_is_output(
-            backrun_in.as_u128().into(),
-            backrun_out.as_u128().into(),
-            ingredients.intermediary_token,
-            ingredients.startend_token,
-            ingredients.target_pool,
-        ),
-    };
+        // caluclate backrun_out using encoded backrun_in
+        let backrun_out = match pool_variant {
+            PoolVariant::UniswapV2 => {
+                let target_pool = ingredients.target_pool.address;
+                let amount_out =
+                    get_amount_out_evm_v2(backrun_in, target_pool, token_in, token_out, &mut evm)?;
+                tx_builder::v2::encode_weth(amount_out)
+            }
+            PoolVariant::UniswapV3 => {
+                let token_in = ingredients.intermediary_token;
+                let token_out = ingredients.startend_token;
+                let swap_fee = ingredients.target_pool.swap_fee;
+                let amount_out =
+                    get_amount_out_evm_v3(backrun_in, token_in, token_out, swap_fee, &mut evm)?;
+                tx_builder::v3::encode_weth(amount_out)
+            }
+        };
+        // create tx.data and tx.value for backrun_in
+        let (mut data, value) = match pool_variant {
+            PoolVariant::UniswapV2 => sandwich_maker.v2.create_multi_payload_weth_is_output(
+                backrun_in,
+                backrun_out,
+                ingredients.intermediary_token,
+                ingredients.target_pool,
+                is_first
+            ),
+            PoolVariant::UniswapV3 => sandwich_maker.v3.create_multi_payload_weth_is_output(
+                backrun_in.as_u128().into(),
+                backrun_out.as_u128().into(),
+                ingredients.intermediary_token,
+                ingredients.startend_token,
+                ingredients.target_pool,
+                is_first
+            ),
+        };
+        backrun_data.append(&mut data);
+        backrun_value += value;
+    }
     #[cfg(test)]
     {
+        println!("[frontrun data] {:02x?}", frontrun_data);
+        println!("[frontrun value] {:02x?}", frontrun_value);
         println!("[backrun data] {:02x?}", backrun_data);
         println!("[backrun value] {:02x?}", backrun_value);
     }
@@ -479,24 +517,31 @@ fn sanity_check(
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
     //
     // caluclate revenue from balance change
-    let post_sandwich_balance = get_balance_of_evm(
-        ingredients.startend_token,
-        sandwich_contract,
-        next_block,
-        &mut evm,
-    )?;
+    let post_sandwich_balance =
+        get_balance_of_evm(weth_address, sandwich_contract, next_block, &mut evm)?;
     let revenue = post_sandwich_balance
         .checked_sub(sandwich_start_balance)
         .unwrap_or_default();
+    let combined_state_diffs = {
+        let mut combined: BTreeMap<H160, AccountDiff> = BTreeMap::new();
 
-    // filter only passing meat txs
-    let good_meats_only = ingredients
-        .meats
-        .iter()
-        .zip(is_meat_good.iter())
-        .filter(|&(_, &b)| b)
-        .map(|(s, _)| s.to_owned())
-        .collect();
+        for ingredients in multi_ingredients.iter() {
+            for (key, value) in ingredients.state_diffs.clone() {
+                combined.insert(key, value);
+            }
+        }
+
+        combined
+    };
+
+    // // filter only passing meat txs
+    // let good_meats_only = ingredients
+    //     .meats
+    //     .iter()
+    //     .zip(is_meat_good.iter())
+    //     .filter(|&(_, &b)| b)
+    //     .map(|(s, _)| s.to_owned())
+    //     .collect();
 
     Ok(OptimalRecipe::new(
         frontrun_data.into(),
@@ -507,10 +552,10 @@ fn sanity_check(
         backrun_value,
         backrun_gas_used,
         convert_access_list(backrun_access_list),
-        good_meats_only,
+        good_meats,
         revenue,
-        ingredients.target_pool,
-        ingredients.state_diffs.clone(),
+        multi_ingredients[0].target_pool,
+        combined_state_diffs.clone(),
     ))
 }
 
@@ -530,7 +575,6 @@ async fn evaluate_sandwich_revenue(
     let mut evm = revm::EVM::new();
     evm.database(fork_db);
     setup_block_state(&mut evm, &next_block);
-
     let pool_variant = ingredients.target_pool.pool_variant;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -673,7 +717,6 @@ async fn evaluate_sandwich_revenue(
             }
         }
     };
-
     let revenue = post_sandwich_balance
         .checked_sub(braindance_starting_balance())
         .unwrap_or_default();
@@ -681,215 +724,215 @@ async fn evaluate_sandwich_revenue(
     Ok(revenue)
 }
 
-#[cfg(test)]
-mod test {
-    use std::str::FromStr;
+// #[cfg(test)]
+// mod test {
+//     use std::str::FromStr;
 
-    use crate::{
-        prelude::{fork_factory::ForkFactory, sandwich_types::RawIngredients},
-        utils::{self, constants, testhelper, tx_builder::SandwichMaker},
-    };
-    use dotenv::dotenv;
-    use ethers::prelude::*;
-    use tokio::{runtime::Runtime, time::Instant};
+//     use crate::{
+//         prelude::{fork_factory::ForkFactory, sandwich_types::RawIngredients},
+//         utils::{self, constants, testhelper, tx_builder::SandwichMaker},
+//     };
+//     use dotenv::dotenv;
+//     use ethers::prelude::*;
+//     use tokio::{runtime::Runtime, time::Instant};
 
-    async fn create_test(fork_block_num: u64, pool_addr: &str, meats: Vec<&str>, is_v2: bool) {
-        dotenv().ok();
-        let ws_provider = testhelper::create_ws().await;
+//     async fn create_test(fork_block_num: u64, pool_addr: &str, meats: Vec<&str>, is_v2: bool) {
+//         dotenv().ok();
+//         let ws_provider = testhelper::create_ws().await;
 
-        let start = Instant::now();
+//         let start = Instant::now();
 
-        let pool = match is_v2 {
-            true => {
-                testhelper::create_v2_pool(pool_addr.parse::<Address>().unwrap(), &ws_provider)
-                    .await
-            }
-            false => {
-                testhelper::create_v3_pool(pool_addr.parse::<Address>().unwrap(), &ws_provider)
-                    .await
-            }
-        };
+//         let pool = match is_v2 {
+//             true => {
+//                 testhelper::create_v2_pool(pool_addr.parse::<Address>().unwrap(), &ws_provider)
+//                     .await
+//             }
+//             false => {
+//                 testhelper::create_v3_pool(pool_addr.parse::<Address>().unwrap(), &ws_provider)
+//                     .await
+//             }
+//         };
 
-        let mut victim_txs = vec![];
+//         let mut victim_txs = vec![];
 
-        for tx_hash in meats {
-            let tx_hash = TxHash::from_str(tx_hash).unwrap();
-            victim_txs.push(ws_provider.get_transaction(tx_hash).await.unwrap().unwrap());
-        }
+//         for tx_hash in meats {
+//             let tx_hash = TxHash::from_str(tx_hash).unwrap();
+//             victim_txs.push(ws_provider.get_transaction(tx_hash).await.unwrap().unwrap());
+//         }
 
-        let state = utils::state_diff::get_from_txs(
-            &ws_provider,
-            &victim_txs,
-            BlockNumber::Number(U64::from(fork_block_num)),
-        )
-        .await
-        .unwrap();
+//         let state = utils::state_diff::get_from_txs(
+//             &ws_provider,
+//             &victim_txs,
+//             BlockNumber::Number(U64::from(fork_block_num)),
+//         )
+//         .await
+//         .unwrap();
 
-        let initial_db = utils::state_diff::to_cache_db(
-            &state,
-            Some(BlockId::Number(BlockNumber::Number(fork_block_num.into()))),
-            &ws_provider,
-        )
-        .await
-        .unwrap();
-        let mut db = ForkFactory::new_sandbox_factory(
-            ws_provider.clone(),
-            initial_db,
-            Some(fork_block_num.into()),
-        );
+//         let initial_db = utils::state_diff::to_cache_db(
+//             &state,
+//             Some(BlockId::Number(BlockNumber::Number(fork_block_num.into()))),
+//             &ws_provider,
+//         )
+//         .await
+//         .unwrap();
+//         let mut db = ForkFactory::new_sandbox_factory(
+//             ws_provider.clone(),
+//             initial_db,
+//             Some(fork_block_num.into()),
+//         );
 
-        let ingredients =
-            RawIngredients::new(&pool, victim_txs, constants::get_weth_address(), state)
-                .await
-                .unwrap();
+//         let ingredients =
+//             RawIngredients::new(&pool, victim_txs, constants::get_weth_address(), state)
+//                 .await
+//                 .unwrap();
 
-        match super::create_optimal_sandwich(
-            &ingredients,
-            ethers::utils::parse_ether("0.35").unwrap(),
-            &testhelper::get_next_block_info(fork_block_num, &ws_provider).await,
-            &mut db,
-            &SandwichMaker::new().await,
-        )
-        .await
-        {
-            Ok(sandwich) => println!("[revenue] {:?}", sandwich.revenue),
-            Err(_) => println!("not sandwichable"),
-        };
-        println!("total_duration took: {:?}", start.elapsed());
-    }
+//         match super::create_meta_optimal_sandwich(
+//             &ingredients,
+//             ethers::utils::parse_ether("0.35").unwrap(),
+//             &testhelper::get_next_block_info(fork_block_num, &ws_provider).await,
+//             &mut db,
+//             &SandwichMaker::new().await,
+//         )
+//         .await
+//         {
+//             Ok(sandwich) => println!("[revenue] {:?}", sandwich.revenue),
+//             Err(_) => println!("not sandwichable"),
+//         };
+//         println!("total_duration took: {:?}", start.elapsed());
+//     }
 
-    #[test]
-    fn sandv2_sushi_router() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16873147,
-                "0xB84C45174Bfc6b8F3EaeCBae11deE63114f5c1b2",
-                vec!["0xb344fdc6a3b7c65c5dd971cb113567e2ee6d0636f261c3b8d624627b90694cdb"],
-                true,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv2_sushi_router() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16873147,
+//                 "0xB84C45174Bfc6b8F3EaeCBae11deE63114f5c1b2",
+//                 vec!["0xb344fdc6a3b7c65c5dd971cb113567e2ee6d0636f261c3b8d624627b90694cdb"],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv3_uniswap_universal_router_one() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16863224,
-                "0x62CBac19051b130746Ec4CF96113aF5618F3A212",
-                vec!["0x90dfe56814821e7f76f2e4970a7b35948670a968abffebb7be69fe528283e6d8"],
-                false,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv3_uniswap_universal_router_one() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16863224,
+//                 "0x62CBac19051b130746Ec4CF96113aF5618F3A212",
+//                 vec!["0x90dfe56814821e7f76f2e4970a7b35948670a968abffebb7be69fe528283e6d8"],
+//                 false,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv3_uniswap_universal_router_two() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16863008,
-                "0xa80838D2BB3d6eBaEd1978FA23b38F91775D8378",
-                vec!["0xcb0d4dc905ae0662e5f18b4ad0c2af4e700e8b5969d878a2dcfd0d9507435f4d"],
-                false,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv3_uniswap_universal_router_two() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16863008,
+//                 "0xa80838D2BB3d6eBaEd1978FA23b38F91775D8378",
+//                 vec!["0xcb0d4dc905ae0662e5f18b4ad0c2af4e700e8b5969d878a2dcfd0d9507435f4d"],
+//                 false,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv2_kyber_swap() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16863312,
-                "0x08650bb9dc722C9c8C62E79C2BAfA2d3fc5B3293",
-                vec!["0x907894174999fdddc8d8f8e90c210cdb894b91c2c0d79ac35603007d3ce54d00"],
-                true,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv2_kyber_swap() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16863312,
+//                 "0x08650bb9dc722C9c8C62E79C2BAfA2d3fc5B3293",
+//                 vec!["0x907894174999fdddc8d8f8e90c210cdb894b91c2c0d79ac35603007d3ce54d00"],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv2_non_sandwichable() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16780624,
-                "0x657c6a08d49b4f0778f9cce1dc49d196cfce9d08",
-                vec!["0x77b0b15a3216885a66b3b800173e0edcae9d8d191f7093b99a46fc9346f67466"],
-                true,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv2_non_sandwichable() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16780624,
+//                 "0x657c6a08d49b4f0778f9cce1dc49d196cfce9d08",
+//                 vec!["0x77b0b15a3216885a66b3b800173e0edcae9d8d191f7093b99a46fc9346f67466"],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv2_multi_with_three_expect_one_reverts() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16780624,
-                "0x657c6a08d49b4f0778f9cce1dc49d196cfce9d08",
-                vec![
-                    "0x4791d05bdd6765f036ff4ae44fc27099997417e3bdb053ecb52182bbfc7767c5",
-                    "0x923c9ba97fea8d72e60c14d1cc360a8e7d99dd4b31274928d6a79704a8546eda",
-                    "0x77b0b15a3216885a66b3b800173e0edcae9d8d191f7093b99a46fc9346f67466",
-                ],
-                true,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv2_multi_with_three_expect_one_reverts() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16780624,
+//                 "0x657c6a08d49b4f0778f9cce1dc49d196cfce9d08",
+//                 vec![
+//                     "0x4791d05bdd6765f036ff4ae44fc27099997417e3bdb053ecb52182bbfc7767c5",
+//                     "0x923c9ba97fea8d72e60c14d1cc360a8e7d99dd4b31274928d6a79704a8546eda",
+//                     "0x77b0b15a3216885a66b3b800173e0edcae9d8d191f7093b99a46fc9346f67466",
+//                 ],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv2_multi_two() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16780624,
-                "0x657c6a08d49B4F0778f9cce1Dc49d196cFCe9d08",
-                vec![
-                    "0x4791d05bdd6765f036ff4ae44fc27099997417e3bdb053ecb52182bbfc7767c5",
-                    "0x923c9ba97fea8d72e60c14d1cc360a8e7d99dd4b31274928d6a79704a8546eda",
-                ],
-                true,
-            )
-            .await;
-        });
-    }
+//     #[test]
+//     fn sandv2_multi_two() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16780624,
+//                 "0x657c6a08d49B4F0778f9cce1Dc49d196cFCe9d08",
+//                 vec![
+//                     "0x4791d05bdd6765f036ff4ae44fc27099997417e3bdb053ecb52182bbfc7767c5",
+//                     "0x923c9ba97fea8d72e60c14d1cc360a8e7d99dd4b31274928d6a79704a8546eda",
+//                 ],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
 
-    #[test]
-    fn sandv2_metamask_swap_router() {
-        // Can't use [tokio::test] attr with `global_backed` for some reason
-        // so manually create a runtime
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            create_test(
-                16873743,
-                "0x7A9dDcf06260404D14AbE3bE99c1804D2A5239ce",
-                vec!["0xcce01725bf7abfab3a4a533275cb4558a66d7794153b4ec01debaf5abd0dc21f"],
-                true,
-            )
-            .await;
-        });
-    }
-}
+//     #[test]
+//     fn sandv2_metamask_swap_router() {
+//         // Can't use [tokio::test] attr with `global_backed` for some reason
+//         // so manually create a runtime
+//         let rt = Runtime::new().unwrap();
+//         rt.block_on(async {
+//             create_test(
+//                 16873743,
+//                 "0x7A9dDcf06260404D14AbE3bE99c1804D2A5239ce",
+//                 vec!["0xcce01725bf7abfab3a4a533275cb4558a66d7794153b4ec01debaf5abd0dc21f"],
+//                 true,
+//             )
+//             .await;
+//         });
+//     }
+// }

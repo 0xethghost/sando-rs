@@ -347,14 +347,14 @@ contract SandwichHelper {
             true,
             otherToken
         );
-        uint256 memoryOffset;
+        uint256 memoryOffsetOut;
         bool isWethToken0 = weth < otherToken;
-        if (isWethToken0) memoryOffset = 68 - 4 - encodedByteShift;
-        else memoryOffset = 36 - 4 - encodedByteShift;
+        if (isWethToken0) memoryOffsetOut = 68 - 4 - encodedByteShift;
+        else memoryOffsetOut = 36 - 4 - encodedByteShift;
         if (isFirstOfPayload) {
             payload = abi.encodePacked(
                 uint8(swapType), // type of swap to make
-                uint8(memoryOffset), // memoryOffset to store amountOut
+                uint8(memoryOffsetOut), // memoryOffset to store amountOut
                 address(pair), // univ2 pair
                 uint32(encodedAmountOut) // amountOut
             );
@@ -362,7 +362,7 @@ contract SandwichHelper {
         } else {
             payload = abi.encodePacked(
                 uint8(swapType), // type of swap to make
-                uint8(memoryOffset), // memoryOffset to store amountOut
+                uint8(memoryOffsetOut), // memoryOffset to store amountOut
                 address(pair), // univ2 pair
                 uint32(encodedAmountOut), // amountOut
                 uint40(encodedAmountIn) // amountIn
