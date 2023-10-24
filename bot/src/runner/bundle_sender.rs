@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use crate::{
     prelude::{
         fork_factory::ForkFactory,
-        make_mega_sandwich,
+        make_sandwich,
         sandwich_types::{OptimalRecipe, RawIngredients},
         BlockInfo, Pool, SendBundleError,
     },
@@ -131,7 +131,7 @@ impl BundleSender {
             let read_lock = sandwich_state.weth_balance.read().await;
             (*read_lock).clone()
         };
-        let optimal_sandwich = match make_mega_sandwich::create_mega_optimal_sandwich(
+        let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
             &multi_ingredients,
             weth_balance,
             &next_block,
