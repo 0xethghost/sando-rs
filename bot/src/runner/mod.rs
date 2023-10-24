@@ -231,7 +231,7 @@ impl Bot {
 
                     // find optimal input to sandwich tx
                     let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-                        &raw_ingredients,
+                        &vec![raw_ingredients],
                         sandwich_balance,
                         &block_oracle.next_block,
                         &mut fork_factory,
@@ -240,11 +240,11 @@ impl Bot {
                     .await
                     {
                         Ok(optimal) => optimal,
-                        Err(_) => {
-                            // log::info!(
-                            //     "{}",
-                            //     format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
-                            // );
+                        Err(e) => {
+                            log::info!(
+                                "{}",
+                                format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
+                            );
                             return;
                         }
                     };

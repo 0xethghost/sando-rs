@@ -56,13 +56,14 @@ pub enum SimulationError {
     EvmReverted(revm::primitives::Bytes),
     AbiError(AbiError),
     ZeroOptimal(),
+    NotMultiMeat(),
 }
 
 impl fmt::Display for SimulationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SimulationError::FrontrunEvmError(db_err) => {
-                write!(f, "Fromrun ran into an EVM error : {:?}", db_err)
+                write!(f, "Frontrun ran into an EVM error : {:?}", db_err)
             }
             SimulationError::FrontrunHalted(halt_reason) => {
                 write!(f, "Frontrun halted due to : {:?}", halt_reason)
@@ -102,6 +103,9 @@ impl fmt::Display for SimulationError {
             }
             SimulationError::ZeroOptimal() => {
                 write!(f, "No optimal sandwich found")
+            }
+            SimulationError::NotMultiMeat() => {
+                write!(f, "Not multimeat sandwich")
             }
         }
     }

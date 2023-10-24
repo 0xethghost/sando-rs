@@ -446,6 +446,32 @@ contract SandwichTest is Test {
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         assertTrue(s, "calling swap failed");
     }
+    function testV3Weth1OutputBig1() public {
+        address pool = 0x62CBac19051b130746Ec4CF96113aF5618F3A212;
+        (address token0, address token1, uint24 fee) = GeneralHelper
+            .getV3PoolInfo(pool);
+        (address inputToken, address outputToken) = (token1, token0);
+
+        int256 amountIn = 2.450740729522938570 ether; // 100000 btt
+
+        // fund sandwich contract
+        vm.startPrank(0xD249942f6d417CbfdcB792B1229353B66c790726);
+        IERC20(inputToken).transfer(sandwich, uint256(amountIn));
+
+        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+            .v3CreateSandwichPayloadWethIsOutput(
+                pool,
+                inputToken,
+                outputToken,
+                fee,
+                amountIn
+            );
+        emit log_bytes(payload);
+
+        changePrank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
+        assertTrue(s, "calling swap failed");
+    }
 
     function testV3Weth1OutputSmall() public {
         address pool = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
