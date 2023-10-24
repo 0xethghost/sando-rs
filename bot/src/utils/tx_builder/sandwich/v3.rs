@@ -251,9 +251,9 @@ impl SandwichLogicV3 {
                 // weth is input and token1
                 (true, false) => self.jump_labels["v3_input1_multi"],
                 // weth is output and token0
-                (false, true) => self.jump_labels["v3_output0_multi"],
+                (false, true) => self.jump_labels["v3_output1_multi"],
                 // weth is output and token1
-                (false, false) => self.jump_labels["v3_output1_multi"],
+                (false, false) => self.jump_labels["v3_output0_multi"],
             }
         } else {
             match (is_weth_input, (input < output)) {
@@ -262,9 +262,9 @@ impl SandwichLogicV3 {
                 // weth is input and token1
                 (true, false) => self.jump_labels["v3_input1"],
                 // weth is output and token0
-                (false, true) => self.jump_labels["v3_output0"],
+                (false, true) => self.jump_labels["v3_output1"],
                 // weth is output and token1
-                (false, false) => self.jump_labels["v3_output1"],
+                (false, false) => self.jump_labels["v3_output0"],
             }
         };
 

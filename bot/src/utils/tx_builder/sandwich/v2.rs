@@ -122,7 +122,7 @@ impl SandwichLogicV2 {
         pair: Pool,
         is_first: bool,
     ) -> (Vec<u8>, U256) {
-        let encoded_swap_value = encode_four_bytes(
+        let encoded_amount_out_swap_value = encode_four_bytes(
             amount_out,
             true,
             utils::constants::get_weth_address() < other_token,
@@ -136,12 +136,12 @@ impl SandwichLogicV2 {
             utils::encode_packed(&[
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
-                    encoded_swap_value.mem_offset,
+                    encoded_amount_out_swap_value.mem_offset,
                     utils::TakeLastXBytes(8),
                 ),
                 utils::PackedToken::Address(pair.address),
                 utils::PackedToken::NumberWithShift(
-                    encoded_swap_value.encoded_value,
+                    encoded_amount_out_swap_value.encoded_value,
                     utils::TakeLastXBytes(32),
                 ),
             ])
@@ -149,12 +149,12 @@ impl SandwichLogicV2 {
             utils::encode_packed(&[
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
-                    encoded_swap_value.mem_offset,
+                    encoded_amount_out_swap_value.mem_offset,
                     utils::TakeLastXBytes(8),
                 ),
                 utils::PackedToken::Address(pair.address),
                 utils::PackedToken::NumberWithShift(
-                    encoded_swap_value.encoded_value,
+                    encoded_amount_out_swap_value.encoded_value,
                     utils::TakeLastXBytes(32),
                 ),
                 utils::PackedToken::NumberWithShift(
@@ -184,7 +184,7 @@ impl SandwichLogicV2 {
         let encoded_amount_in_swap_value = encode_four_bytes(amount_in, false, utils::constants::get_weth_address() < other_token);
         let mut callvalue = U256::from(0);
         let (payload, _) = if is_first {
-            callvalue = encoded_amount_in_swap_value.encoded_value;
+            callvalue = encoded_amount_out_swap_value.encoded_value;
             utils::encode_packed(&[
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
@@ -233,7 +233,7 @@ impl SandwichLogicV2 {
         let weth_addr = utils::constants::get_weth_address();
 
         let swap_type = if is_multiple {
-            match (is_first_of_payload, weth_addr < other_token_addr) {
+            match (is_first_of_payload, is_weth_input) {
                 (true, true) => self.jump_labels["v2_input_multi_first"],
                 (false, true) => self.jump_labels["v2_input_multi_next"],
                 (true, false) => self.jump_labels["v2_output_multi_first"],
