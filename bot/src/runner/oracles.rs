@@ -57,7 +57,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                         let read_lock = sandwich_state.weth_balance.read().await;
                         (*read_lock).clone()
                     };
-                    if sandwich_balance > U256::from(1500000000000000000i128) {
+                    if sandwich_balance > U256::from(1500000000000000000u128) {
                         let sandwich_address = utils::dotenv::get_sandwich_contract_address();
                         let searcher_wallet = utils::dotenv::get_searcher_wallet();
                         // let nonce = utils::get_nonce(&client, searcher_wallet.address())
@@ -91,7 +91,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                             "{}",
                             format!(
                                 "Recover weth transaction {:x?}",
-                                pending_tx.tx_hash().as_bytes()
+                                hex::encode(pending_tx.tx_hash().as_bytes())
                             )
                             .black()
                             .on_white()
@@ -178,25 +178,29 @@ pub fn start_mega_sandwich_oracle(
             } else {
                 panic!("Failed to create new block stream");
             };
-            use std::time::Instant;
-            let mut now = Instant::now();
-
             while let Some(block) = block_stream.next().await {
-                let elpased = now.elapsed();
-                log::info!(
-                    "{}",
-                    format!("[{:?}] Block time elapsed {:?}", block.number, elpased)
-                );
-                now = Instant::now();
                 // clear all recipes
                 // enchanement: don't do this step but keep recipes because they can be used in future
                 {
+                    let bundle_sender = bundle_sender.clone();
                     let mut bundle_sender_guard = bundle_sender.write().await;
                     bundle_sender_guard.pending_sandwiches.clear();
                 } // lock removed here
 
-                // 9.5 seconds from when new block was detected, caluclate mega sandwich
-                thread::sleep(Duration::from_millis(9_500));
+                // 10.5 seconds from when new block was detected, caluclate mega sandwich
+                thread::sleep(Duration::from_millis(8_500));
+                {
+                    // spawn thread to add tx for mega sandwich calculation
+                    let bundle_sender = bundle_sender.clone();
+                    let read = bundle_sender.read().await;
+                    log::info!(
+                        "{}",
+                        format!(
+                            "Pending sandwiches length {:?}",
+                            (*read).pending_sandwiches.len()
+                        )
+                    );
+                }
                 let next_block_info = BlockInfo::find_next_block_info(block);
                 {
                     bundle_sender

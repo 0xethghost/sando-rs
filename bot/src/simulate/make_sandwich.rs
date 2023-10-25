@@ -64,6 +64,7 @@ pub async fn create_optimal_sandwich(
         .await?;
         if optimal.is_zero() {
             return Err(SimulationError::ZeroOptimal());
+            // continue;
         }
         upper_bound = match upper_bound.checked_sub(optimal) {
             Some(amount) => amount,

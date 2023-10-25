@@ -106,8 +106,8 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
-            // use std::time::Instant;
-            // let now = Instant::now();
+            use std::time::Instant;
+            let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) => continue,
@@ -267,7 +267,6 @@ impl Bot {
                     let optimal_sandwich_two = optimal_sandwich.clone();
                     let sandwich_maker = sandwich_maker.clone();
                     // let sandwich_state = sandwich_state.clone();
-
                     if optimal_sandwich.revenue > U256::zero() {
                         tokio::spawn(async move {
                             match bundle_sender::send_bundle(
@@ -278,7 +277,14 @@ impl Bot {
                             )
                             .await
                             {
-                                Ok(_) => { /* all reporting already done inside of send_bundle */ }
+                                Ok(_) => {
+                                    /* all reporting already done inside of send_bundle */
+                                    bundle_sender
+                                        .write()
+                                        .await
+                                        .add_recipe(optimal_sandwich_two)
+                                        .await;
+                                }
                                 Err(e) => {
                                     log::info!(
                                         "{}",
@@ -292,19 +298,20 @@ impl Bot {
                                 }
                             };
                         });
-                        // let elpased = now.elapsed();
-                        // log::info!("{}", format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased));
+                        // let bundle_sender = bundle_sender.clone();
+                        // tokio::spawn(async move {
+                        //     bundle_sender
+                        //         .write()
+                        //         .await
+                        //         .add_recipe(optimal_sandwich_two)
+                        //         .await;
+                        // });
+                        let elpased = now.elapsed();
+                        log::info!(
+                            "{}",
+                            format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased)
+                        );
                     }
-
-                    // spawn thread to add tx for mega sandwich calculation
-                    let bundle_sender = bundle_sender.clone();
-                    tokio::spawn(async move {
-                        bundle_sender
-                            .write()
-                            .await
-                            .add_recipe(optimal_sandwich_two)
-                            .await;
-                    });
                 });
             }
         }

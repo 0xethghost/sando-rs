@@ -68,10 +68,10 @@ impl BundleSender {
                 (*read_lock).clone()
             };
 
-            // we alr sent this tx
-            if recipes.len() <= 1 {
-                continue;
-            }
+            // // we alr sent this tx
+            // if recipes.len() <= 1 {
+            //     continue;
+            // }
 
             let target_pool = target_pool.clone();
 
@@ -110,7 +110,7 @@ impl BundleSender {
                 Err(_) => continue,
             };
         }
-        
+
         let sandwich_state = sandwich_state.clone();
         let next_block = next_block.clone();
         let sandwich_maker = sandwich_maker.clone();
@@ -254,11 +254,13 @@ pub async fn send_bundle(
     //             + (U256::from(recipe.backrun_gas_used) * max_fee),
     //     )
     //     .unwrap_or_default();
-    let cost = U256::from(recipe.frontrun_gas_used) * target_block.base_fee
-        + U256::from(recipe.backrun_gas_used) * max_fee;
+
+    let frontrun_transaction_fee = U256::from(recipe.frontrun_gas_used) * target_block.base_fee;
+    let backrun_transaction_fee = U256::from(recipe.backrun_gas_used) * max_fee;
+    let cost = frontrun_transaction_fee + backrun_transaction_fee;
     log::info!(
         "{}",
-        format!("{:?} nonce {:?} ", recipe.print_meats(), nonce)
+        format!("{:?} nonce {:?} ", recipe.print_meats(), nonce).blue().on_yellow()
     );
     log::info!(
         "{}",
@@ -277,6 +279,28 @@ pub async fn send_bundle(
             "{:?} Cost {:?} ETH",
             recipe.print_meats(),
             format_units(cost, "ether").unwrap()
+        )
+        .bold()
+        .yellow()
+        .on_bright_blue()
+    );
+    log::info!(
+        "{}",
+        format!(
+            "{:?} Frontrun transaction fee {:?} ETH",
+            recipe.print_meats(),
+            format_units(frontrun_transaction_fee, "ether").unwrap()
+        )
+        .bold()
+        .yellow()
+        .on_bright_blue()
+    );
+    log::info!(
+        "{}",
+        format!(
+            "{:?} Backrun transaction fee {:?} ETH",
+            recipe.print_meats(),
+            format_units(backrun_transaction_fee, "ether").unwrap()
         )
         .bold()
         .yellow()
@@ -440,14 +464,24 @@ fn calculate_bribe_for_max_fee(
     }
 
     log::info!(
-        "{:?} Max gas fee is {:?} gwei",
-        recipe.print_meats(),
-        format_units(max_fee, "gwei").unwrap()
+        "{}",
+        format!(
+            "{:?} Max gas fee is {:?} gwei",
+            recipe.print_meats(),
+            format_units(max_fee, "gwei").unwrap()
+        )
+        .yellow()
+        .on_blue()
     );
     log::info!(
-        "{:?} effective miner tip is {:?} gwei",
-        recipe.print_meats(),
-        format_units(effective_miner_tip.unwrap(), "gwei").unwrap()
+        "{}",
+        format!(
+            "{:?} effective miner tip is {:?} gwei",
+            recipe.print_meats(),
+            format_units(effective_miner_tip.unwrap(), "gwei").unwrap()
+        )
+        .yellow()
+        .on_blue()
     );
 
     Ok(max_fee)
