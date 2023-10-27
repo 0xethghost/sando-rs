@@ -329,15 +329,18 @@ pub fn encode_intermediary_token(
     amount_in: U256,
     is_weth_input: bool,
     intermediary_address: Address,
+    is_with_dust: bool,
 ) -> U256 {
-    let backrun_in = encode_four_bytes(
+    let mut backrun_in = encode_four_bytes(
         amount_in,
         is_weth_input,
         utils::constants::get_weth_address() < intermediary_address,
     );
 
     // makes sure that we keep some dust
-    // backrun_in.encoded_value -= U256::from(1);
+    if is_with_dust {
+        backrun_in.encoded_value -= U256::from(1);
+    }
     backrun_in.decode()
 }
 

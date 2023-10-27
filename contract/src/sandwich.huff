@@ -222,10 +222,10 @@
 
         // setup calldata for swap(amountOut0, amountOut1, address(this), "")
         [V2_SWAP_SIG_32] 0x00 mstore                // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
-        0x00 0x04 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
-        0x00 0x24 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
+        0x00 0x04 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
+        0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
 
-        // get amountIn and store at memOffset
+        // get amountOut and store at memOffset
         0x16 calldataload
         chainid calldataload                        // extract encodedValue by removing memOffset
         0x00
@@ -250,8 +250,8 @@
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
-        dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
+        [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, TRANSFER_SIG)
+        dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(4, pair_address)
 
         // get amountIn and store at memOffset
         0x2a calldataload
@@ -450,7 +450,7 @@
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, a9059cbb00000000000000000000000000000000000000000000000000000000)
+        [TRANSFER_SIG] returndatasize mstore        // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, TRANSFER_SIG)
         0x2a calldataload
         0xffffffff00000000000000000000000000000000000000000000000000000000
         and                                         // [token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
@@ -486,12 +486,12 @@
         gtfo0 jump
 
     v2_output_multi_next:
-        chainid 0x24 mstore
+        0x00 0x24 mstore
         0x00
-        dup1
+        0x00
         0xa4
         0x40
-        dup3
+        0x00
         dup6 0x02 add 
         calldataload 0x60 shr
 
@@ -508,10 +508,10 @@
 
         // call input token transfer(to,value)
         0x00
-        dup1
+        0x00
         0x44
-        dup2
-        dup1
+        0x00
+        0x00
         dup12 0x16 add
         calldataload 0x60 shr   // token address
         gas
@@ -953,7 +953,6 @@
         0x00                                        // [0]
         dup1                                        // [0, 0]
         revert                                      // revert (0,0) for wagmi
-    
         
     gtfo1:
         chainid                                        // [1]

@@ -192,7 +192,7 @@ pub fn start_mega_sandwich_oracle(
                 } // lock removed here
 
                 // 10.5 seconds from when new block was detected, caluclate mega sandwich
-                tokio::time::sleep(Duration::from_millis(8_500)).await;
+                tokio::time::sleep(Duration::from_millis(10_500)).await;
                 let next_block_info = BlockInfo::find_next_block_info(block);
                 {
                     let bundle_sender = bundle_sender.clone();
