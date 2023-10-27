@@ -295,7 +295,6 @@ pub fn get_sandwich_weth_balance_evm(
     setup_block_state(&mut evm, &next_block);
     let weth = utils::constants::get_weth_address();
     let sandwich_contract = get_sandwich_contract_address();
-
     get_balance_of_evm(
         weth,
         sandwich_contract,
