@@ -260,7 +260,9 @@ pub async fn send_bundle(
     let cost = frontrun_transaction_fee + backrun_transaction_fee;
     log::info!(
         "{}",
-        format!("{:?} nonce {:?} ", recipe.print_meats(), nonce).blue().on_yellow()
+        format!("{:?} nonce {:?} ", recipe.print_meats(), nonce)
+            .blue()
+            .on_yellow()
     );
     log::info!(
         "{}",
@@ -327,19 +329,7 @@ pub async fn send_bundle(
 
         tokio::spawn(async move {
             match relay.flashbots_client.inner().send_bundle(&bundle).await {
-                Ok(_) => {
-                    // log::info!(
-                    //     "{}",
-                    //     format!(
-                    //         "{:?} Bundle sent to {:?}",
-                    //         recipe.print_meats(),
-                    //         relay.relay_name
-                    //     )
-                    //     .bold()
-                    //     .yellow()
-                    //     .on_bright_blue()
-                    // );
-                }
+                Ok(_) => {}
                 Err(e) => {
                     if relay.relay_name != "builder0x69" && relay.relay_name != "rsync-builder" {
                         log::error!("{:?} Failed to send bundle: {:?}", relay.relay_name, e);
@@ -416,7 +406,6 @@ pub async fn send_bundle(
             // }
         });
     }
-
     Ok(())
 }
 

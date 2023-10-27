@@ -198,7 +198,7 @@ async fn juiced_quadratic_search(
                 return Ok(U256::zero());
             }
             // no revenue found, most likely small optimal so decrease range
-            upper_bound = intervals[intervals.len() / 3] - 1;
+            upper_bound = intervals[intervals.len() / 3].checked_sub(U256::from(1)).unwrap_or_default();
             continue;
         }
 

@@ -4,7 +4,7 @@ use ethers::prelude::*;
 // use ethers::types::transaction::eip2930::AccessList;
 use ethers::types::TransactionRequest;
 use std::sync::Arc;
-use std::thread;
+// use std::thread;
 use std::time::Duration;
 use tokio::sync::RwLock;
 
@@ -37,13 +37,13 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
             while let Some(block) = block_stream.next().await {
                 // lock the RwLock for write access and update the variable
                 {
-                    let mut lock = next_block_clone.write().await;
-                    lock.update_block_number(block.number.unwrap());
-                    lock.update_block_timestamp(block.timestamp);
-                    lock.update_base_fee(block);
+                    let mut write_lock = next_block_clone.write().await;
+                    write_lock.update_block_number(block.number.unwrap());
+                    write_lock.update_block_timestamp(block.timestamp);
+                    write_lock.update_base_fee(block);
 
-                    let latest_block = &lock.latest_block;
-                    let next_block = &lock.next_block;
+                    let latest_block = &write_lock.latest_block;
+                    let next_block = &write_lock.next_block;
                     log::info!(
                     "{}",
                     format!(
@@ -53,6 +53,8 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                     .bright_purple()
                     .on_black()
                     );
+                } // remove write lock due to being out of scope here
+                {
                     let sandwich_balance = {
                         let read_lock = sandwich_state.weth_balance.read().await;
                         (*read_lock).clone()
@@ -98,7 +100,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                         );
                         // let receipt = pending_tx.await.unwrap().unwrap();
                     }
-                } // remove write lock due to being out of scope here
+                }
             }
         }
     });
@@ -179,6 +181,8 @@ pub fn start_mega_sandwich_oracle(
                 panic!("Failed to create new block stream");
             };
             while let Some(block) = block_stream.next().await {
+                //update searcher nonce
+                sandwich_maker.update_searcher_nonce().await;
                 // clear all recipes
                 // enchanement: don't do this step but keep recipes because they can be used in future
                 {
@@ -188,21 +192,10 @@ pub fn start_mega_sandwich_oracle(
                 } // lock removed here
 
                 // 10.5 seconds from when new block was detected, caluclate mega sandwich
-                thread::sleep(Duration::from_millis(8_500));
-                {
-                    // spawn thread to add tx for mega sandwich calculation
-                    let bundle_sender = bundle_sender.clone();
-                    let read = bundle_sender.read().await;
-                    log::info!(
-                        "{}",
-                        format!(
-                            "Pending sandwiches length {:?}",
-                            (*read).pending_sandwiches.len()
-                        )
-                    );
-                }
+                tokio::time::sleep(Duration::from_millis(8_500)).await;
                 let next_block_info = BlockInfo::find_next_block_info(block);
                 {
+                    let bundle_sender = bundle_sender.clone();
                     bundle_sender
                         .write()
                         .await

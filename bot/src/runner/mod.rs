@@ -106,8 +106,8 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
-            use std::time::Instant;
-            let now = Instant::now();
+            // use std::time::Instant;
+            // let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) => continue,
@@ -179,9 +179,6 @@ impl Bot {
             self.sandwich_state
                 .update_weth_balance(sandwich_balance)
                 .await;
-
-            self.sandwich_maker.update_searcher_nonce().await;
-
             // let sandwich_balance = {
             //     let read_lock = self.sandwich_state.weth_balance.read().await;
             //     (*read_lock).clone()
@@ -240,11 +237,11 @@ impl Bot {
                     .await
                     {
                         Ok(optimal) => optimal,
-                        Err(e) => {
-                            log::info!(
-                                "{}",
-                                format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
-                            );
+                        Err(_) => {
+                            // log::info!(
+                            //     "{}",
+                            //     format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
+                            // );
                             return;
                         }
                     };
@@ -265,9 +262,10 @@ impl Bot {
                     // spawn thread to send tx to builders
                     let optimal_sandwich = optimal_sandwich.clone();
                     let optimal_sandwich_two = optimal_sandwich.clone();
-                    let sandwich_maker = sandwich_maker.clone();
+                    // let sandwich_maker = sandwich_maker.clone();
                     // let sandwich_state = sandwich_state.clone();
                     if optimal_sandwich.revenue > U256::zero() {
+                        let bundle_sender = bundle_sender.clone();
                         tokio::spawn(async move {
                             match bundle_sender::send_bundle(
                                 &optimal_sandwich,
@@ -279,11 +277,13 @@ impl Bot {
                             {
                                 Ok(_) => {
                                     /* all reporting already done inside of send_bundle */
-                                    bundle_sender
-                                        .write()
-                                        .await
-                                        .add_recipe(optimal_sandwich_two)
-                                        .await;
+                                    tokio::spawn(async move {
+                                        bundle_sender
+                                            .write()
+                                            .await
+                                            .add_recipe(optimal_sandwich_two)
+                                            .await;
+                                    });
                                 }
                                 Err(e) => {
                                     log::info!(
@@ -306,11 +306,11 @@ impl Bot {
                         //         .add_recipe(optimal_sandwich_two)
                         //         .await;
                         // });
-                        let elpased = now.elapsed();
-                        log::info!(
-                            "{}",
-                            format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased)
-                        );
+                        // let elpased = now.elapsed();
+                        // log::info!(
+                        //     "{}",
+                        //     format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased)
+                        // );
                     }
                 });
             }
