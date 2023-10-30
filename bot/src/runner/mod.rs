@@ -237,11 +237,11 @@ impl Bot {
                     .await
                     {
                         Ok(optimal) => optimal,
-                        Err(_) => {
-                            // log::info!(
-                            //     "{}",
-                            //     format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
-                            // );
+                        Err(e) => {
+                            log::info!(
+                                "{}",
+                                format!("[{:?}] sim failed due to {:?}", &victim_hash, e).yellow()
+                            );
                             return;
                         }
                     };
@@ -266,6 +266,12 @@ impl Bot {
                     // let sandwich_state = sandwich_state.clone();
                     if optimal_sandwich.revenue > U256::zero() {
                         let bundle_sender = bundle_sender.clone();
+                        bundle_sender
+                            .write()
+                            .await
+                            .add_recipe(optimal_sandwich_two)
+                            .await;
+
                         tokio::spawn(async move {
                             match bundle_sender::send_bundle(
                                 &optimal_sandwich,
@@ -277,13 +283,19 @@ impl Bot {
                             {
                                 Ok(_) => {
                                     /* all reporting already done inside of send_bundle */
-                                    tokio::spawn(async move {
-                                        bundle_sender
-                                            .write()
-                                            .await
-                                            .add_recipe(optimal_sandwich_two)
-                                            .await;
-                                    });
+                                    // bundle_sender
+                                    //     .write()
+                                    //     .await
+                                    //     .add_recipe(optimal_sandwich_two)
+                                    //     .await;
+                                    log::info!(
+                                        "{}",
+                                        format!(
+                                            "{:?} added to bundle sender",
+                                            optimal_sandwich.print_meats()
+                                        )
+                                        .bright_magenta()
+                                    );
                                 }
                                 Err(e) => {
                                     log::info!(

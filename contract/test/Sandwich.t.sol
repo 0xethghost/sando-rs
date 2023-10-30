@@ -621,6 +621,161 @@ contract SandwichTest is Test {
         assertTrue(s, "calling multimeat swap failed");
     }
 
+    function testHybridMultiMeatInput() public {
+        V2Meat[2] memory v2Meats = [
+            V2Meat(
+                0xdAC17F958D2ee523a2206206994597C13D831ec7,
+                address(0),
+                1.94212341234123424 ether,
+                true,
+                true
+            ),
+            V2Meat(
+                0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+                address(0),
+                0.942 ether,
+                false,
+                false
+            )
+        ];
+        V3Meat[2] memory v3Meats = [
+            V3Meat(
+                0x7379e81228514a1D2a6Cf7559203998E20598346,
+                address(0),
+                1.2345678912341234 ether,
+                false
+            ),
+            V3Meat(
+                0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640,
+                address(0),
+                1.2345678912341234 ether,
+                false
+            )
+        ];
+        bytes memory payload;
+        uint256 callvalue;
+        for (uint i = 0; i < v2Meats.length; i++) {
+            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+                .v2CreateSandwichMultiPayloadWethIsInput(
+                    v2Meats[i].intermediateToken,
+                    v2Meats[i].amountIn,
+                    v2Meats[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        for (uint i = 0; i < v3Meats.length; i++) {
+            (address token0, address token1, uint24 fee) = GeneralHelper
+                .getV3PoolInfo(v3Meats[i].pool);
+            (address inputToken, address outputToken) = token0 == address(weth)
+                ? (token0, token1)
+                : (token1, token0);
+            (bytes memory subPayload, ) = sandwichHelper
+                .v3CreateSandwichMultiMeatPayloadWethIsInput(
+                    v3Meats[i].pool,
+                    inputToken,
+                    outputToken,
+                    fee,
+                    v3Meats[i].amountIn,
+                    v3Meats[i].isFirstOfPayload
+                );
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: callvalue}(payload);
+        assertTrue(s, "calling hybrid weth input multimeat swap failed");
+    }
+
+    function testHybridMultiMeatOutput() public {
+        V2Meat[1] memory v2meats1 = [
+            V2Meat(
+                0xe53EC727dbDEB9E2d5456c3be40cFF031AB40A55,
+                binance8,
+                1000000 ether,
+                true,
+                true
+            )
+        ];
+        V3Meat[1] memory v3meats = [
+            V3Meat(
+                0x7379e81228514a1D2a6Cf7559203998E20598346,
+                0x56556075Ab3e2Bb83984E90C52850AFd38F20883,
+                1e16,
+                false
+            )
+        ];
+        V2Meat[1] memory v2meats2 = [
+            V2Meat(
+                0x6B175474E89094C44Da98b954EedeAC495271d0F,
+                0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8,
+                4722.366481770134 ether,
+                false,
+                false
+            )
+        ];
+        bytes memory payload;
+        uint256 callvalue;
+        for (uint i = 0; i < v2meats1.length; i++) {
+            address inputToken = v2meats1[i].intermediateToken;
+            vm.prank(v2meats1[i].faucet);
+            IERC20(inputToken).transfer(sandwich, uint256(v2meats1[i].amountIn));
+            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+                .v2CreateSandwichMultiPayloadWethIsOutput(
+                    v2meats1[i].intermediateToken,
+                    v2meats1[i].amountIn,
+                    v2meats1[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        
+        for (uint i = 0; i < v3meats.length; i++) {
+            (address token0, address token1, uint24 fee) = GeneralHelper
+                .getV3PoolInfo(v3meats[i].pool);
+            (address inputToken, address outputToken) = token0 == address(weth)
+                ? (token1, token0)
+                : (token0, token1);
+            vm.prank(v3meats[i].faucet);
+            IERC20(inputToken).transfer(sandwich, uint256(v3meats[i].amountIn));
+
+            (bytes memory subPayload, ) = sandwichHelper
+                .v3CreateSandwichMultiMeatPayloadWethIsOutput(
+                    v3meats[i].pool,
+                    inputToken,
+                    outputToken,
+                    fee,
+                    v3meats[i].amountIn,
+                    v3meats[i].isFirstOfPayload
+                );
+            payload = abi.encodePacked(payload, subPayload);
+        }
+
+        for (uint i = 0; i < v2meats2.length; i++) {
+            address inputToken = v2meats2[i].intermediateToken;
+            vm.prank(v2meats2[i].faucet);
+            IERC20(inputToken).transfer(sandwich, uint256(v2meats2[i].amountIn));
+            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+                .v2CreateSandwichMultiPayloadWethIsOutput(
+                    v2meats2[i].intermediateToken,
+                    v2meats2[i].amountIn,
+                    v2meats2[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        
+        emit log_uint(callvalue);
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: callvalue}(payload);
+        assertTrue(s, "calling hybrid weth output multimeat swap failed");
+    }
+
     // Test by recovering the initial funded amount
     function testRecoverWeth() public {
         vm.startPrank(searcher, searcher);
