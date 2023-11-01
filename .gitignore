@@ -1,5 +1,6 @@
 bot/target
 bot/Cargo.lock
+bot/pools.json.zstd
 **/.env
 contract/out
 contract/cache
