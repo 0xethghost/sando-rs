@@ -16,12 +16,13 @@ contract Withdraw is Script {
 
     function run() public {
         uint8 withdrawLabel = getJumpLabelFromSig("recoverWeth");
-        uint amountWithdraw = 0.35 ether;
-        bytes memory payload = abi.encodePacked(withdrawLabel, amountWithdraw);
+        uint amountWithdraw = 4.041820827974101895 ether;
+        uint callvalue = amountWithdraw / wethEncodeMultiple();
+        bytes memory payload = abi.encodePacked(withdrawLabel);
         console.logBytes(payload);
         uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
         vm.broadcast(searcherPrivateKey);
-        (bool result, ) = sandwich.call(payload);
+        (bool result, ) = sandwich.call{value: callvalue}(payload);
         require(result, "Call reverted");
     }
 
@@ -61,5 +62,9 @@ contract Withdraw is Script {
                 startingIndex + (0x05 * i)
             );
         }
+    }
+
+    function wethEncodeMultiple() public pure returns (uint256) {
+        return uint256(0x100000000);
     }
 }

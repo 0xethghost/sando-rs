@@ -221,9 +221,8 @@
                                                     // [pair_address, value, argoffset, argsize, retoffset, retsize] !expanded pair_swap_args
 
         // setup calldata for swap(amountOut0, amountOut1, address(this), "")
-        [V2_SWAP_SIG_32] 0x00 mstore                // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
-        0x00 0x04 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, 0)
-        0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, 0) **Clear Memory**
+        [V2_SWAP_SIG_32] 0x00 mstore                // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f00000000000000000000000000000000000000000000000000000000)
+        0x00 0x20 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(32, 0x00) - clear memory
 
         // get amountOut and store at memOffset
         0x16 calldataload

@@ -42,77 +42,6 @@ Weth address is hardcoded into the contract and there are individual methods to 
 ### Encode Packed
 All calldata is encoded by packing the values together. 
 
-## Interface
-
-| JUMPDEST  | Function Name |
-| :-------------: | :------------- |
-| 0x05  | V2 Swap, Weth is Token0 and Output  |
-| 0x0A  | V2 Swap, Weth is Token0 and Input  |
-| 0x0F  | V2 Swap, Weth is Token1 and Output  |
-| 0x14  | V2 Swap, Weth is Token1 and Input |
-| 0x19  | V3 Swap, Weth is Token1 and Output, Big Encoding |
-| 0x1E  | V3 Swap, Weth is Token0 and Output, Big Encoding  |
-| 0x23  | V3 Swap, Weth is Token1 and Output, Small Encoding  |
-| 0x28  | V3 Swap, Weth is Token0 and Output, Small Encoding |
-| 0x2D  | V3 Swap, Weth is Token0 and Input  |
-| 0x32  | V3 Swap, Weth is Token1 and Input  |
-| 0x37  | Seppuku (self-destruct)  |
-| 0x3C  | Recover Eth  |
-| 0x41  | Recover Weth  |
-| 0x46  | Deposit Weth  |
-| 0xFA  | UniswapV3 Callback  |
-
-
-## Calldata Encoding 
-### Uniswap V2 Calldata Encoding Format
-
-#### When Weth is input (0x0A, 0x16)
-| Byte Length  | Variable |
-| :-------------: | :------------- |
-| 1 | JUMPDEST  |
-| 1 | Where to store AmountOut  |
-| 20 | PairAddress  |
-| 4 | AmountOut  |
-
-#### When Weth is output (0x05, 0x2a)
-| Byte Length  | Variable |
-| :-------------: | :------------- |
-| 1 | JUMPDEST  |
-| 1 | Where to store AmountIn  |
-| 20 | PairAddress  |
-| 20 | TokenInAddress  |
-| 4 | AmountIn  |
-
-### Uniswap V3 Calldata Encoding Format
-
-#### When Weth is input (0x2D, 0x33)
-| Byte Length  | Variable |
-| :-------------: | :------------- |
-| 1 | JUMPDEST  |
-| 20 | PairAddress  |
-| 32 | PairInitHash  | 
-> PairInitHash used to verify msg.sender is pool in callback
-
-#### When Weth is output small (0x2D, 0x33)
-| Byte Length  | Variable |
-| :-------------: | :------------- |
-| 1 | JUMPDEST  |
-| 20 | PairAddress  |
-| 20 | TokenInAddress  |
-| 6 | AmountIn  | 
-| 32 | PairInitHash  | 
-> Small encoding when AmountIn < 10^12
-
-#### When Weth is output big (0x19, 0x1F)
-| Byte Length  | Variable |
-| :-------------: | :------------- |
-| 1 | JUMPDEST  |
-| 20 | PairAddress  |
-| 20 | TokenInAddress  |
-| 9 | AmountIn  | 
-| 32 | PairInitHash  | 
-> AmountIn will be multiplied by 10^12
-
 ## Tests
 
 ```console
@@ -122,25 +51,25 @@ forge test --rpc-url <your-rpc-url-here>
 ## Deployment
 ```console
 source .env  
-forge script ./script/Deploy.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --private-key $PRIVATE_KEY
+forge script ./script/Deploy.s.sol --rpc-url $HTTP_RPC_URL --broadcast --private-key $PRIVATE_KEY
 ```
 
 ## Deposit WETH
 ```console
 source .env  
-forge script ./script/Deposit.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $SEARCHER
+forge script ./script/Deposit.s.sol --rpc-url $HTTP_RPC_URL --broadcast --sender $SEARCHER
 ```
 
 ## Withdraw WETH
 ```console
 source .env  
-forge script ./script/Withdraw.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $SEARCHER
+forge script ./script/Withdraw.s.sol --rpc-url $HTTP_RPC_URL --broadcast --sender $SEARCHER
 ```
 
 ## Self destruct
 ```console
 source .env  
-forge script ./script/Seppuku.s.sol --rpc-url $HTTPS_RPC_URL --broadcast --sender $SEARCHER
+forge script ./script/Seppuku.s.sol --rpc-url $HTTP_RPC_URL --broadcast --sender $SEARCHER
 ```
 
 ## Benchmarks
