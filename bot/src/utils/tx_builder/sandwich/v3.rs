@@ -299,9 +299,10 @@ fn encode_num_bytes(amount: U256, num_bytes: u8) -> EncodedSwapValue {
 
 /// returns the encoded value of amount in (actual value passed to contract)
 pub fn encode_intermediary_token(amount_in: U256) -> U256 {
-    let backrun_in = encode_num_bytes(amount_in, 5);
+    let mut backrun_in = encode_num_bytes(amount_in, 5);
     // makes sure that we keep some dust
-    // backrun_in.encoded_value -= U256::from(1);
+    // to save gas fee when calling SSTORE
+    backrun_in.encoded_value -= U256::from(1);
     backrun_in.decode()
 }
 

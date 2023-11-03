@@ -77,6 +77,8 @@ pub async fn get_all_relay_endpoints() -> Vec<BundleRelay> {
         // ("bloxroute", "https://mev.api.blxrbdn.com"),
         ("boba-builder", "https://boba-builder.com/searcher"),
         ("nfactorial", "https://rpc.nfactorial.xyz"),
+        ("buildAI", "https://buildai.net"),
+        ("payload", "https://rpc.payload.de"),
     ];
 
     let mut relays: Vec<BundleRelay> = vec![];

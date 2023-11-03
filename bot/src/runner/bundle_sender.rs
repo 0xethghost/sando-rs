@@ -331,22 +331,13 @@ pub async fn send_bundle(
             match relay.flashbots_client.inner().send_bundle(&bundle).await {
                 Ok(_) => {}
                 Err(e) => {
-                    if relay.relay_name != "builder0x69" && relay.relay_name != "rsync-builder" {
+                    if relay.relay_name != "builder0x69"
+                        && relay.relay_name != "rsync-builder"
+                        && relay.relay_name != "payload"
+                    {
                         log::error!("{:?} Failed to send bundle: {:?}", relay.relay_name, e);
                     } else {
-                        // log::info!(
-                        //     "{}",
-                        //     format!(
-                        //         "{:?} Bundle sent to {:?}",
-                        //         recipe.print_meats(),
-                        //         relay.relay_name
-                        //     )
-                        //     .bold()
-                        //     .yellow()
-                        //     .on_bright_blue()
-                        // );
                     }
-                    // return;
                 }
             };
 

@@ -59,7 +59,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                         let read_lock = sandwich_state.weth_balance.read().await;
                         (*read_lock).clone()
                     };
-                    if sandwich_balance > U256::from(1500000000000000000u128) {
+                    if sandwich_balance > U256::from(4500000000000000000u128) {
                         let sandwich_address = utils::dotenv::get_sandwich_contract_address();
                         let searcher_wallet = utils::dotenv::get_searcher_wallet();
                         // let nonce = utils::get_nonce(&client, searcher_wallet.address())
@@ -107,7 +107,7 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
 }
 
 fn get_recover_weth_payload_value(recover_amount: U256) -> (Vec<u8>, U256) {
-    let swap_type = U256::from(89);
+    let swap_type = U256::from(124);
     let (payload, _) = utils::encode_packed(&[utils::PackedToken::NumberWithShift(
         swap_type,
         utils::TakeLastXBytes(8),

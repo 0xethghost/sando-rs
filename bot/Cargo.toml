@@ -13,7 +13,8 @@ authors = ["sipovalovdmitro <https://github.com/sipovalovdmitro>"]
 [dependencies]
 ethers-flashbots = { git = "https://github.com/onbjerg/ethers-flashbots" }
 ethers = {version = "2.0.0", features = ["abigen", "ws"]}
-revm = {version = "3.0.0", features = ["ethersdb", "serde", "std"]}
+revm = {version = "=3.1.1", features = ["ethersdb", "serde", "std"]}
+revm-primitives= "=1.1.2"
 dotenv = "0.15.0"
 hashbrown = "0.14.0"
 tokio = { version = "1", features = ["full"] }

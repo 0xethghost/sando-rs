@@ -440,7 +440,7 @@ fn sanity_check(
         let pool_variant = ingredients.target_pool.pool_variant;
         let backrun_in = match pool_variant {
             PoolVariant::UniswapV2 => {
-                tx_builder::v2::encode_intermediary_token(balance, false, token_in)
+                    tx_builder::v2::encode_intermediary_token(balance, false, token_in)
             }
             PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
         };
