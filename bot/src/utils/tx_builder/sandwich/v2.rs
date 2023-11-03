@@ -157,10 +157,7 @@ impl SandwichLogicV2 {
                     encoded_amount_out_swap_value.encoded_value,
                     utils::TakeLastXBytes(32),
                 ),
-                utils::PackedToken::NumberWithShift(
-                    encoded_amount_in,
-                    utils::TakeLastXBytes(40),
-                ),
+                utils::PackedToken::NumberWithShift(encoded_amount_in, utils::TakeLastXBytes(40)),
             ])
         };
 
@@ -181,7 +178,11 @@ impl SandwichLogicV2 {
         );
 
         let swap_type = self._find_swap_type(true, is_first, false, other_token);
-        let encoded_amount_in_swap_value = encode_four_bytes(amount_in, false, utils::constants::get_weth_address() < other_token);
+        let encoded_amount_in_swap_value = encode_four_bytes(
+            amount_in,
+            false,
+            utils::constants::get_weth_address() < other_token,
+        );
         let mut callvalue = U256::from(0);
         let (payload, _) = if is_first {
             callvalue = encoded_amount_out_swap_value.encoded_value;
@@ -197,7 +198,10 @@ impl SandwichLogicV2 {
                     encoded_amount_in_swap_value.encoded_value,
                     utils::TakeLastXBytes(32),
                 ),
-                utils::PackedToken::NumberWithShift(encoded_amount_out_swap_value.mem_offset, utils::TakeLastXBytes(8)),
+                utils::PackedToken::NumberWithShift(
+                    encoded_amount_out_swap_value.mem_offset,
+                    utils::TakeLastXBytes(8),
+                ),
             ])
         } else {
             utils::encode_packed(&[
@@ -216,7 +220,10 @@ impl SandwichLogicV2 {
                     encoded_amount_out_swap_value.encoded_value,
                     utils::TakeLastXBytes(40),
                 ),
-                utils::PackedToken::NumberWithShift(encoded_amount_out_swap_value.mem_offset, utils::TakeLastXBytes(8)),
+                utils::PackedToken::NumberWithShift(
+                    encoded_amount_out_swap_value.mem_offset,
+                    utils::TakeLastXBytes(8),
+                ),
             ])
         };
 
@@ -329,7 +336,6 @@ pub fn encode_intermediary_token(
     amount_in: U256,
     is_weth_input: bool,
     intermediary_address: Address,
-    is_with_dust: bool,
 ) -> U256 {
     let mut backrun_in = encode_four_bytes(
         amount_in,
@@ -338,9 +344,8 @@ pub fn encode_intermediary_token(
     );
 
     // makes sure that we keep some dust
-    if is_with_dust {
-        backrun_in.encoded_value -= U256::from(1);
-    }
+    // to save gas fee when calling SSTORE
+    backrun_in.encoded_value -= U256::from(1);
     backrun_in.decode()
 }
 
