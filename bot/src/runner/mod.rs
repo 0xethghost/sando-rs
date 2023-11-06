@@ -201,7 +201,6 @@ impl Bot {
                 let sandwichable_pool = sandwichable_pool.clone();
                 let mut fork_factory = fork_factory.clone();
                 let block_oracle = block_oracle.clone();
-                // let sandwich_state = self.sandwich_state.clone();
                 let sandwich_maker = self.sandwich_maker.clone();
                 let bundle_sender = self.bundle_sender.clone();
                 let state_diffs = state_diffs.clone();
@@ -210,7 +209,6 @@ impl Bot {
                     // enhancement: increase opportunities by handling swaps in pools with stables
                     let input_token = utils::constants::get_weth_address();
                     let victim_hash = victim_tx.hash;
-
                     // variables used when searching for opportunity
                     let raw_ingredients = if let Ok(data) = RawIngredients::new(
                         &sandwichable_pool.pool,
@@ -246,30 +244,16 @@ impl Bot {
                         }
                     };
 
-                    // // check if has dust
-                    // let other_token = if optimal_sandwich.target_pool.token_0
-                    //     != utils::constants::get_weth_address()
-                    // {
-                    //     optimal_sandwich.target_pool.token_0
-                    // } else {
-                    //     optimal_sandwich.target_pool.token_1
-                    // };
-
-                    // if sandwich_state.has_dust(&other_token).await {
-                    //     optimal_sandwich.has_dust = true;
-                    // }
-
                     // spawn thread to send tx to builders
                     let optimal_sandwich = optimal_sandwich.clone();
                     let optimal_sandwich_two = optimal_sandwich.clone();
                     // let sandwich_maker = sandwich_maker.clone();
-                    // let sandwich_state = sandwich_state.clone();
                     if optimal_sandwich.revenue > U256::zero() {
                         let bundle_sender = bundle_sender.clone();
                         bundle_sender
                             .write()
                             .await
-                            .add_recipe(optimal_sandwich_two)
+                            .add_recipe(optimal_sandwich_two, sandwichable_pool.pool)
                             .await;
                         log::info!(
                             "{}",
@@ -288,15 +272,7 @@ impl Bot {
                             )
                             .await
                             {
-                                Ok(_) => {
-                                    /* all reporting already done inside of send_bundle */
-                                    // bundle_sender
-                                    //     .write()
-                                    //     .await
-                                    //     .add_recipe(optimal_sandwich_two)
-                                    //     .await;
-                                    
-                                }
+                                Ok(_) => { /* all reporting already done inside of send_bundle */ }
                                 Err(e) => {
                                     log::info!(
                                         "{}",

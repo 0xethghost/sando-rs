@@ -62,10 +62,10 @@ pub async fn create_optimal_sandwich(
             fork_factory,
         )
         .await?;
-        if optimal.is_zero() {
-            return Err(SimulationError::ZeroOptimal());
-            // continue;
-        }
+        // if optimal.is_zero() {
+        //     return Err(SimulationError::ZeroOptimal());
+        //     // continue;
+        // }
         upper_bound = match upper_bound.checked_sub(optimal) {
             Some(amount) => amount,
             None => U256::zero(),
@@ -198,7 +198,9 @@ async fn juiced_quadratic_search(
                 return Ok(U256::zero());
             }
             // no revenue found, most likely small optimal so decrease range
-            upper_bound = intervals[intervals.len() / 3].checked_sub(U256::from(1)).unwrap_or_default();
+            upper_bound = intervals[intervals.len() / 3]
+                .checked_sub(U256::from(1))
+                .unwrap_or_default();
             continue;
         }
 
@@ -254,8 +256,9 @@ fn sanity_check(
     let mut frontrun_data: Vec<u8> = Vec::new();
     let mut frontrun_value: U256 = U256::from(0);
     let is_multiple = multi_ingredients.len() > 1;
+
     // prepare frontrun data and value
-    for (index, ingredients) in multi_ingredients.iter().enumerate() {
+    for (index, ingredients) in multi_ingredients.iter_mut().enumerate() {
         let is_first = index == 0;
         let pool_variant = ingredients.target_pool.pool_variant;
 
@@ -279,6 +282,11 @@ fn sanity_check(
 
         let token_in = ingredients.startend_token;
         let token_out = ingredients.intermediary_token;
+        // set token has dust in pools
+        let token_out_balance = get_balance_of_evm(token_out, sandwich_contract, next_block, &mut evm)?;
+        if token_out_balance > U256::zero() {
+            ingredients.target_pool.has_dust = true;
+        }
         let frontrun_out = match pool_variant {
             PoolVariant::UniswapV2 => {
                 let target_pool = ingredients.target_pool.address;
@@ -440,7 +448,7 @@ fn sanity_check(
         let pool_variant = ingredients.target_pool.pool_variant;
         let backrun_in = match pool_variant {
             PoolVariant::UniswapV2 => {
-                    tx_builder::v2::encode_intermediary_token(balance, false, token_in)
+                tx_builder::v2::encode_intermediary_token(balance, false, token_in)
             }
             PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
         };
@@ -577,6 +585,8 @@ fn sanity_check(
     //     .map(|(s, _)| s.to_owned())
     //     .collect();
 
+    let target_pools = multi_ingredients.iter().map(|x| x.target_pool).collect();
+
     Ok(OptimalRecipe::new(
         frontrun_data.into(),
         frontrun_value,
@@ -588,7 +598,7 @@ fn sanity_check(
         convert_access_list(backrun_access_list),
         good_meats,
         revenue,
-        multi_ingredients[0].target_pool,
+        target_pools,
         combined_state_diffs.clone(),
     ))
 }

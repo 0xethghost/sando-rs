@@ -41,13 +41,12 @@ impl BundleSender {
     // * `recipe`: an `OptimalRecipe` instance representing the recipe to add
     //
     // Returns: This function returns nothing
-    pub async fn add_recipe(&mut self, recipe: OptimalRecipe) {
-        let target_pool = recipe.target_pool;
-        if let Some(sandwich_vec) = self.pending_sandwiches.get(&target_pool) {
+    pub async fn add_recipe(&mut self, recipe: OptimalRecipe, pool: Pool) {
+        if let Some(sandwich_vec) = self.pending_sandwiches.get(&pool) {
             sandwich_vec.write().await.push(recipe);
         } else {
             let new_vector = Arc::new(RwLock::new(vec![recipe]));
-            self.pending_sandwiches.insert(target_pool, new_vector);
+            self.pending_sandwiches.insert(pool, new_vector);
         }
     }
 
@@ -414,7 +413,7 @@ fn calculate_bribe_for_max_fee(
     target_block: &BlockInfo,
 ) -> Result<U256, SendBundleError> {
     // frontrun txfee is fixed, exclude it from bribe calculations
-    let revenue_minus_frontrun_tx_fee = match recipe
+    let mut revenue_minus_frontrun_tx_fee = match recipe
         .revenue
         .checked_sub(U256::from(recipe.frontrun_gas_used) * target_block.base_fee)
     {
@@ -424,6 +423,11 @@ fn calculate_bribe_for_max_fee(
 
     // overpay to get dust onto sandwich contractIf
     // more info: https://twitter.com/libevm/status/1474870661373779969
+    for pool in recipe.target_pools.iter() {
+        if !pool.has_dust {
+            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000;
+        }
+    }
     let mut rng = rand::thread_rng();
 
     // enchanement: make bribe adaptive based on competitors
