@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use ethers::{prelude::*, types::transaction::eip2718::TypedTransaction};
 
-pub mod alert;
 pub mod constants;
 pub mod contracts;
+
 pub mod dotenv;
 pub mod encode_packed;
 pub mod state_diff;

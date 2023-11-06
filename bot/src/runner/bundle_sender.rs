@@ -131,7 +131,7 @@ impl BundleSender {
             (*read_lock).clone()
         };
         let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-            &multi_ingredients,
+            &mut multi_ingredients,
             weth_balance,
             &next_block,
             &mut fork_factory,

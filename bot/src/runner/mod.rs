@@ -226,7 +226,7 @@ impl Bot {
 
                     // find optimal input to sandwich tx
                     let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-                        &vec![raw_ingredients],
+                        &mut vec![raw_ingredients],
                         sandwich_balance,
                         &block_oracle.next_block,
                         &mut fork_factory,

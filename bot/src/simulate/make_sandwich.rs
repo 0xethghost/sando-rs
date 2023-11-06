@@ -35,7 +35,7 @@ use super::{
 // Ok(OptimalRecipe) if no errors during calculation
 // Err(SimulationError) if error during calculation
 pub async fn create_optimal_sandwich(
-    multi_ingredients: &[RawIngredients],
+    multi_ingredients: &mut [RawIngredients],
     sandwich_balance: U256,
     next_block: &BlockInfo,
     fork_factory: &mut ForkFactory,
@@ -240,7 +240,7 @@ async fn juiced_quadratic_search(
 fn sanity_check(
     sandwich_start_balance: U256,
     frontrun_ins: Vec<U256>,
-    multi_ingredients: &[RawIngredients],
+    multi_ingredients: &mut [RawIngredients],
     next_block: &BlockInfo,
     sandwich_maker: &SandwichMaker,
     fork_db: ForkDB,
@@ -824,13 +824,13 @@ mod test {
             .unwrap()
     }
 
-    async fn create_test(fork_block_num: u64, multi_ingredients: &[RawIngredients]) {
+    async fn create_test(fork_block_num: u64, multi_ingredients: &mut [RawIngredients]) {
         let start = Instant::now();
         let ws_provider = testhelper::create_ws().await;
         let combined_state_diffs = {
             let mut combined: BTreeMap<H160, AccountDiff> = BTreeMap::new();
 
-            for ingredients in multi_ingredients {
+            for ingredients in multi_ingredients.iter() {
                 for (key, value) in ingredients.state_diffs.clone() {
                     combined.insert(key, value);
                 }
@@ -889,7 +889,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -907,7 +907,7 @@ mod test {
                 false,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -926,7 +926,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -951,7 +951,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients_1, ingredients_2]).await;
+            create_test(fork_block_num, &mut vec![ingredients_1, ingredients_2]).await;
         });
     }
 
@@ -970,7 +970,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -988,7 +988,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -1011,7 +1011,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -1029,7 +1029,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 }
