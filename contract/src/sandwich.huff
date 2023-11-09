@@ -451,9 +451,7 @@
         // setup calldata (in memory) for transfer(to,value)
         [TRANSFER_SIG] returndatasize mstore        // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, TRANSFER_SIG)
         0x2a calldataload
-        0xffffffff00000000000000000000000000000000000000000000000000000000
-        and                                         // [token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
-        chainid calldataload                        
+        chainid calldataload                        // [token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
         returndatasize byte                         // [memOffset, token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
         mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(memOffset, token_amount_in)
         dup1 0x04 mstore                            // mstore(0x04, pair_address)
@@ -498,8 +496,6 @@
         [TRANSFER_SIG] dup3 mstore
         dup7 0x2a add
         calldataload
-        0xffffffff00000000000000000000000000000000000000000000000000000000
-        and
         dup8 calldataload
         chainid byte
         mstore

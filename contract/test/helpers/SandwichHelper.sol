@@ -291,8 +291,11 @@ contract SandwichHelper {
         (
             uint256 encodedAmountIn,
             uint256 encodedByteShift,
-            uint256 amountInActual
+
         ) = encodeNumToByteAndOffsetV2(amountIn, 4);
+        // with dust
+        encodedAmountIn -= 1;
+        uint256 amountInActual = encodedAmountIn << (encodedByteShift * 8);
 
         payload = abi.encodePacked(
             uint8(swapType), // token we're giving
@@ -392,8 +395,11 @@ contract SandwichHelper {
         (
             uint256 encodedAmountIn,
             uint256 encodedByteShiftIn,
-            uint256 amountInActual
+
         ) = encodeNumToByteAndOffsetV2(amountIn, 4);
+        // with dust
+        encodedAmountIn -= 1;
+        uint256 amountInActual = encodedAmountIn << (encodedByteShiftIn * 8);
         // Get amounts out and encode it
         (
             uint256 encodedAmountOut,
@@ -401,14 +407,13 @@ contract SandwichHelper {
 
         ) = encodeNumToByteAndOffsetV2(
                 GeneralHelper.getAmountOut(otherToken, weth, amountInActual),
-                5                
+                5
             );
         console.log(encodedByteShiftOut);
         if (isWethToken0) {
             memoryOffsetIn = 68 - encodedByteShiftIn - 4; // calldata for transfer(to,value)
             memoryOffsetOut = 68 - encodedByteShiftOut; // 0x40 + swap(amountout0, amountout1, address(this), "")
-        }
-        else {
+        } else {
             memoryOffsetIn = 68 - encodedByteShiftIn - 4; // calldata for transfer(to,value)
             memoryOffsetOut = 100 - encodedByteShiftOut; // 0x40 + swap(amountout0, amountout1, address(this), "")
         }
