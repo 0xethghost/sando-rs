@@ -121,6 +121,7 @@ contract SandwichTest is Test {
 
         (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
+        emit log_bytes(payloadV4);
         vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
         (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);

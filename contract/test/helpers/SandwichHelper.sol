@@ -243,7 +243,6 @@ contract SandwichHelper {
         // Encode amountIn here (so we can use it for next step)
         uint256 amountInActual = (amountIn / wethEncodeMultiple()) *
             wethEncodeMultiple();
-        bool isWethToken0 = weth < otherToken;
         // Get amounts out and encode it
         (
             uint256 encodedAmountOut,
@@ -257,6 +256,7 @@ contract SandwichHelper {
         // Libary function starts here
         uint8 swapType = _v2FindFunctionSig(false, false, true, otherToken);
         uint256 memoryOffset;
+        bool isWethToken0 = weth < otherToken;
         if (isWethToken0) memoryOffset = 68 - 4 - encodedByteShift;
         else memoryOffset = 36 - 4 - encodedByteShift;
         payload = abi.encodePacked(

@@ -5,7 +5,7 @@
 #define constant UNISWAP_V3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984000000000000000000000000
 #define constant UNISWAP_PAIR_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54
 
-#define constant SEARCHER = 0x0F91479f971bd0B98629311B6c9052b8363bc9A5
+#define constant SEARCHER = 0x56272d28c6087752136b8b72C4fCC2993Ca5c4eF
 #define constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
 
 // +-------------------------------------------+
@@ -222,7 +222,8 @@
 
         // setup calldata for swap(amountOut0, amountOut1, address(this), "")
         [V2_SWAP_SIG_32] 0x00 mstore                // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f00000000000000000000000000000000000000000000000000000000)
-        0x00 0x20 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(32, 0x00) - clear memory
+        0x00 0x04 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(32, 0x00) - clear memory
+        0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(32, 0x00) - clear memory
 
         // get amountOut and store at memOffset
         0x16 calldataload
