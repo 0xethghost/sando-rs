@@ -130,7 +130,7 @@
         // Extract pool_key_hash for msg.sender validation
         0x99 calldataload
 
-        // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pool_key_hash)
+        // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pair_hash)
         __RIGHTPAD(0xFF) returndatasize mstore                // [pool_key_hash] *mstore(0, ff)
         [UNISWAP_V3_FACTORY] chainid mstore                    // [pool_key_hash] *mstore(1, FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
