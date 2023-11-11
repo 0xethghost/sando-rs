@@ -2,8 +2,11 @@
 #define constant MAX_SQRT_PRICE_LIMIT_X96 = 0xFFFD8963EFD1FC6A506488495D951D5263988D25
 // 4295128749 is the global lower bound
 #define constant MIN_SQRT_PRICE_LIMIT_X96 = 0x1000276AD
-#define constant UNISWAP_V3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984000000000000000000000000
+#define constant UNISWAP_V3_FACTORY = 0xFF1F98431c8aD98523631AE4a59f267346ea31F9840000000000000000000000
+#define constant PANCAKE_V3_FACTORY = 0xFF41ff9AA7e16B8B1a8a8dc4f0eFacd93D02d071c90000000000000000000000
+#define constant SUSHISWAP_V3_FACTORY = 0xFFbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f0000000000000000000000
 #define constant UNISWAP_PAIR_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54
+#define constant PANCAKE_PAIR_INIT_CODE_HASH = 0x6ce8eb472fa82df5469c6ab6d485f17c3ad13c8cd7af59b3d4a8026c5ce0f7e2
 
 #define constant SEARCHER = 0x56272d28c6087752136b8b72C4fCC2993Ca5c4eF
 #define constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
@@ -30,7 +33,7 @@
     [SEARCHER] caller eq                        // [is_caller_searcher]
     sandwich_entry_point
     jumpi
-    uniswap_v3_callback
+    v3_callback
     jump
     
     sandwich_entry_point:
@@ -124,15 +127,15 @@
         jump
 
     // calldata: int256 amount0Delta, int256 amount1Delta, bytes data
-    uniswap_v3_callback:
+    v3_callback:
         [SEARCHER] origin eq
-        iszero gtfo1 jumpi
+        iszero gtfo2 jumpi
         // Extract pool_key_hash for msg.sender validation
         0x99 calldataload
 
+        // uniswap v3
         // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pair_hash)
-        __RIGHTPAD(0xFF) returndatasize mstore                // [pool_key_hash] *mstore(0, ff)
-        [UNISWAP_V3_FACTORY] chainid mstore                    // [pool_key_hash] *mstore(1, FACTORY)
+        [UNISWAP_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
         [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
 
@@ -143,8 +146,38 @@
 
         // check if caller is equal to calculated pool addr
         caller eq
-        iszero exit jumpi                 // [] * Check if msg.sender is pool
+        v3_callback_token_transfer jumpi                 // [] * Check if msg.sender is pool
+        // pancake v3
+        0x15 mload
+        [PANCAKE_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
+        0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
+        [PANCAKE_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
 
+        // call keccak256 and transform result to address
+        0x55 returndatasize sha3                              // [keccak256_result]
+        0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        and                                         // [pair_addr]
+
+        // check if caller is equal to calculated pool addr
+        caller eq
+        v3_callback_token_transfer jumpi                 // [] * Check if msg.sender is pool
+        // sushiswap v3
+        0x15 mload
+        [SUSHISWAP_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
+        0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
+        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
+
+        // call keccak256 and transform result to address
+        0x55 returndatasize sha3                              // [keccak256_result]
+        0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        and                                         // [pair_addr]
+
+        // check if caller is equal to calculated pool addr
+        caller eq
+        v3_callback_token_transfer jumpi                 // [] * Check if msg.sender is pool
+        exit jump
+
+    v3_callback_token_transfer:
         // setup stack for when we call inputToken.transfer
         returndatasize                              // [retsize]
         returndatasize                              // [retoffset, retsize]
@@ -172,7 +205,7 @@
 
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize]
         call exit jumpi                             // [*pair_swap_args]
-        gtfo1 jump
+        gtfo2 jump
 
     // ****KEEP THIS LABEL UNJUMPABLE TO IF YOU EVER INCREASE JUMP_LABEL IN CALLDATA FROM 1BYTES to 2BYTES****
     // ****KEEP THIS LABEL UNJUMPABLE TO IF YOU EVER INCREASE JUMP_LABEL IN CALLDATA FROM 1BYTES to 2BYTES****
@@ -945,13 +978,21 @@
         exit jumpi
         gtfo0 jump
 
+    // single swap revert
     gtfo0:
         0x00                                        // [0]
         dup1                                        // [0, 0]
         revert                                      // revert (0,0) for wagmi
         
+    // multiswap revert
     gtfo1:
         chainid                                        // [1]
         dup1                                        // [1, 1]
-        revert                                      // revert (0,0) for wagmi
+        revert                                      // revert (1,1) for wagmi
+        
+    // v3 callback revert
+    gtfo2:
+        0x02                                        // [2]
+        dup1                                        // [2, 2]
+        revert                                      // revert (2,2) for wagmi
 }

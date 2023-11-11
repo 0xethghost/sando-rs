@@ -114,6 +114,20 @@ async fn main() -> Result<()> {
         PoolVariant::UniswapV3,
         12369621,
     ));
+    
+    //// Add Pancake v3 pools
+    dexes.push(Dex::new(
+        H160::from_str("0x41ff9AA7e16B8B1a8a8dc4f0eFacd93D02d071c9").unwrap(),
+        PoolVariant::UniswapV3,
+        16950672,
+    ));
+
+    //// Add Sushiswap v3 pools
+    dexes.push(Dex::new(
+        H160::from_str("0xbaceb8ec6b9355dfc0269c18bac9d6e2bdc29c4f").unwrap(),
+        PoolVariant::UniswapV3,
+        16955547,
+    ));
 
     // let pools_from_file = utils::pools::get_pools_from_file();
 
