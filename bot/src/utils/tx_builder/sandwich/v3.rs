@@ -1,4 +1,5 @@
 use crate::{prelude::Pool, utils};
+use crate::utils::constants::get_prepare_stack_payload;
 
 use super::*;
 
@@ -17,14 +18,13 @@ impl SandwichLogicV3 {
         // encachement: turn this into a macro or constant?
         let jump_label_names_single = vec!["v3_input0", "v3_input1", "v3_output0", "v3_output1"];
         let jump_label_names_multi = vec![
-            "v3_multi_pre",
             "v3_input0_multi",
             "v3_input1_multi",
             "v3_output0_multi",
             "v3_output1_multi",
         ];
         let start_offset_single = 54;
-        let start_offset_multi = 94;
+        let start_offset_multi = 99;
 
         for x in 0..jump_label_names_single.len() {
             jump_labels.insert(
@@ -140,7 +140,7 @@ impl SandwichLogicV3 {
         let encoded_amount_out_swap_value: EncodedSwapValue =
             encode_num_bytes(U256::from(amount_out.as_u128()), 5);
 
-        let v3_multi_pre_sig = self.jump_labels["v3_input0_multi"];
+        let prepare_stack_sig = get_prepare_stack_payload();
         let (payload_data, str_payload) = utils::encode_packed(&[
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
@@ -165,7 +165,7 @@ impl SandwichLogicV3 {
         let (payload, _) = if is_first {
             utils::encode_packed(&[
                 utils::PackedToken::NumberWithShift(
-                    U256::from(v3_multi_pre_sig),
+                    U256::from(prepare_stack_sig),
                     utils::TakeLastXBytes(8),
                 ),
                 utils::PackedToken::Bytes(&payload_data),
@@ -198,7 +198,7 @@ impl SandwichLogicV3 {
         let encoded_amount_out_swap_value: EncodedSwapValue =
             encode_num_bytes(U256::from(amount_out.as_u128()), 5);
 
-        let v3_multi_pre_sig = self.jump_labels["v3_input0_multi"];
+        let prepare_stack_sig = get_prepare_stack_payload();
         let (payload_data, str_payload) = utils::encode_packed(&[
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
@@ -223,7 +223,7 @@ impl SandwichLogicV3 {
         let (payload, _) = if is_first {
             utils::encode_packed(&[
                 utils::PackedToken::NumberWithShift(
-                    U256::from(v3_multi_pre_sig),
+                    U256::from(prepare_stack_sig),
                     utils::TakeLastXBytes(8),
                 ),
                 utils::PackedToken::Bytes(&payload_data),

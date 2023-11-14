@@ -94,8 +94,8 @@
         v2_output_multi_next
         jump
 
-    v3_multi_pre_gate:
-        v3_multi_pre
+    prepare_stack_gate:
+        prepare_stack
         jump
     
     v3_input0_multi_gate:
@@ -129,29 +129,32 @@
     // calldata: int256 amount0Delta, int256 amount1Delta, bytes data
     v3_callback:
         [SEARCHER] origin eq
-        iszero gtfo2 jumpi
+        iszero 
+        0x02                                        // [2]
+        dup1                                        // [2, 2]
+        revert                                      // revert (2,2) for wagmi
         // Extract pool_key_hash for msg.sender validation
         0x99 calldataload
 
         // uniswap v3
         // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pair_hash)
-        [UNISWAP_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
+        [UNISWAP_V3_FACTORY] returndatasize mstore  // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
-        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
+        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
-        0x55 returndatasize sha3                              // [keccak256_result]
+        0x55 returndatasize sha3                    // [keccak256_result]
         0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         and                                         // [pair_addr]
 
         // check if caller is equal to calculated pool addr
         caller eq
-        v3_callback_token_transfer jumpi                 // [] * Check if msg.sender is pool
+        v3_callback_token_transfer jumpi            // [] * Check if msg.sender is pool
         // pancake v3
         0x15 mload
         [PANCAKE_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
-        [PANCAKE_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
+        [PANCAKE_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
         0x55 returndatasize sha3                              // [keccak256_result]
@@ -160,12 +163,12 @@
 
         // check if caller is equal to calculated pool addr
         caller eq
-        v3_callback_token_transfer jumpi                 // [] * Check if msg.sender is pool
+        v3_callback_token_transfer jumpi            // [] * Check if msg.sender is pool
         // sushiswap v3
         0x15 mload
         [SUSHISWAP_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
-        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore           // [] *mstore(53, PAIR_HASH)
+        [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
         0x55 returndatasize sha3                              // [keccak256_result]
@@ -205,7 +208,9 @@
 
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize]
         call exit jumpi                             // [*pair_swap_args]
-        gtfo2 jump
+        0x02                                        // [2]
+        dup1                                        // [2, 2]
+        revert                                      // revert (2,2) for wagmi
 
     // ****KEEP THIS LABEL UNJUMPABLE TO IF YOU EVER INCREASE JUMP_LABEL IN CALLDATA FROM 1BYTES to 2BYTES****
     // ****KEEP THIS LABEL UNJUMPABLE TO IF YOU EVER INCREASE JUMP_LABEL IN CALLDATA FROM 1BYTES to 2BYTES****
@@ -225,7 +230,9 @@
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize]
         call 
         exit jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
         
     v2_input_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
@@ -271,7 +278,9 @@
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v2_output0_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
@@ -287,9 +296,9 @@
         dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(4, pair_address)
 
         // get amountIn and store at memOffset
-        0x2a calldataload
-        chainid calldataload                        // extract encodedValue by removing memOffset
-        returndatasize byte mstore                            // extract memOffset and perform mstore
+        0x2a calldataload                           // extract encodedValue by removing memOffset
+        chainid calldataload                        
+        returndatasize byte mstore                  // extract memOffset and perform mstore
 
         // call tokenIn transferFrom
         returndatasize                              // [retsize, *pair_swap_args]
@@ -305,15 +314,17 @@
         // setup calldata for swap(wethOut, 0, address(this), "")
         0x00 0x04 mstore
         0x00 0x24 mstore
-        [V2_SWAP_SIG_32] callvalue add 0x00 mstore                       // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f0000...000callvalue)
+        [V2_SWAP_SIG_32] callvalue add 0x00 mstore  // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f0000...000callvalue)
         address 0x44 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, address(this))
         0x80 0x64 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, 0x80) 4 + 32 + 32 + 32, 0x80 because bytes is dynamic
 
         // call pair.swap
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call 
-        exit jumpi                      // [] *did swap succeed without failure?
-        gtfo0 jump
+        exit jumpi                                  // [] *did swap succeed without failure?
+        0x00
+        dup1
+        revert
 
     v2_output1_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
@@ -322,7 +333,7 @@
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
         returndatasize                              // [argoffseifwWIs12d&R9H@^t, argsize, retoffset, retsize]
         returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
-        0x02 calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
+        0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
         [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
@@ -330,8 +341,8 @@
 
         // get amountIn and store at memOffset
         0x2a calldataload
-        chainid calldataload                              // extract encodedValue by removing memOffset
-        returndatasize byte mstore                            // extract memOffset and perform mstore
+        chainid calldataload                        // extract encodedValue by removing memOffset
+        returndatasize byte mstore                  // extract memOffset and perform mstore
 
         // call tokenIn transfer
         returndatasize                              // [retsize, *pair_swap_args]
@@ -355,7 +366,9 @@
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         exit jumpi                      // [] *did swap succeed without failure?
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v2_input_multi_first:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
@@ -417,7 +430,9 @@
         byte
         jumpi                   
         
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v2_input_multi_next:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
@@ -472,7 +487,9 @@
         calldataload 
         0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
 
     v2_output_multi_first:
         returndatasize                              // [retsize]
@@ -514,7 +531,9 @@
         0x2e calldataload
         chainid byte 
         jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v2_output_multi_next:
         0x00 0x24 mstore
@@ -567,7 +586,9 @@
         dup2 calldataload
         0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
     
     // (UniswapV3) Weth is token0 && input && has an offset of 0
     v3_input0:
@@ -605,10 +626,12 @@
         gt
         and
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v3_input1:
-        // setup calldata for pool.swap(address(this), true, amountSpecified, maxSqrtPriceLimitX96, data)
+        // setup calldata for pool.swap(address(this), false, amountSpecified, maxSqrtPriceLimitX96, data)
         [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         // returndatasize 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
@@ -645,10 +668,12 @@
         lt
         and
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v3_output0:
-        // setup calldata for pool.swap(address(this), true, amountSpecified, maxSqrtPriceLimitX96, data)
+        // setup calldata for pool.swap(address(this), false, amountSpecified, maxSqrtPriceLimitX96, data)
         [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
@@ -683,7 +708,9 @@
         lt
         and
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v3_output1:
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
@@ -723,9 +750,12 @@
         gt
         and
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
     v3_input0_multi:
+        // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
         [V3_SWAP_SIG_32] 0x00 mstore
         address 0x04 mstore
         chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
@@ -770,7 +800,9 @@
         swap1
         dup2 calldataload 0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
 
     v3_input1_multi:
         [V3_SWAP_SIG_32] 0x00 mstore
@@ -817,7 +849,9 @@
         swap1
         dup2 calldataload 0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
 
     v3_output0_multi:
         [V3_SWAP_SIG_32] 0x00 mstore
@@ -864,7 +898,9 @@
         swap1
         dup2 calldataload 0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
     
     v3_output1_multi:
         [V3_SWAP_SIG_32] 0x00 mstore
@@ -912,16 +948,135 @@
         swap1
         dup2 calldataload 0x00 byte
         jumpi
-        gtfo1 jump
+        chainid
+        dup1
+        revert
 
-    v3_multi_pre:
+    prepare_stack:
         chainid
         returndatasize
         calldataload
         chainid
         byte
         jump
-        
+
+    arbitrage_weth_input:
+        // setup calldata for weth transferFrom(address(this), pair, amount)
+        [TRANSFER_FROM_SIG] 0x00 mstore
+        address 0x04 mstore
+        dup1
+        0x08
+        add
+        calldataload 0x60 shr
+        0x24 mstore
+        0x00 0x44 mstore                                                    // clear memory
+        dup1 chainid add
+        calldataload
+        0xffffffffff000000000000000000000000000000000000000000000000000000
+        and
+        0x5b mstore
+
+        // call weth transferFrom
+        0x00
+        dup1
+        0x64
+        dup2
+        dup1
+        [WETH]
+        gas 
+        call
+        pop
+
+        // jump to next
+        0x06 add dup1
+        calldataload 0x00 byte
+        jump
+    
+    arbitrage_v2_swap_to_other:
+        // setup calldata for swap(amountOut0, amountOut1, to, "")
+        0x00 0x04 mstore
+        0x00 0x24 mstore                            // clear memory
+        [V2_SWAP_SIG_32] 0x00 mstore
+        // extract amount out
+        dup1 0x16 add
+        calldataload
+        0xffffffff00000000000000000000000000000000000000000000000000000000
+        and
+        // extract amount out memoffset
+        dup2
+        calldataload
+        chainid
+        byte
+        mstore
+        // extract swap to address
+        dup1 0x1c add calldataload 0x60 shr
+        0x44 mstore
+        0x80 0x64 mstore
+        0x00 0x84 mstore
+        // call swap
+        0x00
+        dup1
+        0xa4
+        dup2
+        dup1
+        dup6 0x02 add
+        calldataload 0x60 shr               // pool address
+        gas
+        call
+        swap1
+        0x1a
+        add
+        swap1
+        dup2
+        calldataload
+        0x00 byte jumpi
+        // revert if swap failed
+        0x00
+        dup1
+        revert
+
+    arbitrage_v2_swap_to_address:
+        // setup calldata for swap(amountOut0, amountOut1, address(this), "")
+        0x00 0x04 mstore
+        0x00 0x24 mstore                            // clear memory
+        [V2_SWAP_SIG_32] 0x00 mstore
+        // extract amount out
+        dup1 0x16 add
+        calldataload
+        0xffffffff00000000000000000000000000000000000000000000000000000000
+        and
+        // extract amount out memoffset
+        dup2
+        calldataload
+        chainid
+        byte
+        mstore
+        // address(this)
+        address 0x44 mstore
+        0x80 0x64 mstore
+        0x00 0x84 mstore
+        // call swap
+        0x00
+        dup1
+        0xa4
+        dup2
+        dup1
+        dup6 0x02 add
+        calldataload 0x60 shr               // pool address
+        gas
+        call
+        swap1
+        0x1a
+        add
+        swap1
+        dup2
+        calldataload
+        0x00 byte jumpi
+        // revert if swap failed
+        0x00
+        dup1
+        revert
+
     // incase you deploy with metamorphic factory
     seppuku:
 
@@ -960,7 +1115,9 @@
         call
         and
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
         
     deposit_weth:
         // prepare variables for deposit call
@@ -976,20 +1133,10 @@
         gas
         call 
         exit jumpi
-        gtfo0 jump
+        0x00
+        dup1
+        revert
 
-    // single swap revert
-    gtfo0:
-        0x00                                        // [0]
-        dup1                                        // [0, 0]
-        revert                                      // revert (0,0) for wagmi
-        
-    // multiswap revert
-    gtfo1:
-        chainid                                        // [1]
-        dup1                                        // [1, 1]
-        revert                                      // revert (1,1) for wagmi
-        
     // v3 callback revert
     gtfo2:
         0x02                                        // [2]
