@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "foundry-huff/HuffDeployer.sol";
 import "./helpers/GeneralHelper.sol";
-import "./helpers/SandwichHelper.sol";
+import "./helpers/MevHelper.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import "./interfaces/IERC20.sol";
 import "v3-core/interfaces/IUniswapV3Pool.sol";
@@ -17,8 +17,10 @@ contract SandwichTest is Test {
     address constant searcher = 0x56272d28c6087752136b8b72C4fCC2993Ca5c4eF;
 
     address sandwich;
-    SandwichHelper sandwichHelper;
+    MevHelper mevHelper;
     IWETH weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address uniswapV2Factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address shibaV2Factory = 0x115934131916C8b277DD010Ee02de363c09d037c;
     uint256 wethFundAmount = 1000000000 ether;
 
     struct V3Meat {
@@ -36,8 +38,14 @@ contract SandwichTest is Test {
         bool isFirstOfPayload;
     }
 
+    struct V2Path {
+        address inputToken;
+        address outputToken;
+        address factory;
+    }
+
     function setUp() public {
-        sandwichHelper = new SandwichHelper();
+        mevHelper = new MevHelper();
         sandwich = HuffDeployer.deploy("sandwich");
 
         // fund sandwich
@@ -56,18 +64,20 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 usdtBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
 
-        uint256 actualAmountIn = (amountIn /
-            sandwichHelper.wethEncodeMultiple()) *
-            sandwichHelper.wethEncodeMultiple();
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+        uint256 actualAmountIn = (amountIn / mevHelper.wethEncodeMultiple()) *
+            mevHelper.wethEncodeMultiple();
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOutV2(
             address(weth),
             outputToken,
+            uniswapV2Factory,
             actualAmountIn
         );
-        (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4);
+        (, , uint256 expectedAmountOut) = mevHelper.encodeNumToByteAndOffsetV2(
+            amountOutFromEncoded,
+            4
+        );
 
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
         emit log_bytes(payloadV4);
         emit log_uint(encodedValue);
@@ -108,18 +118,20 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 usdcBalanceBefore = IERC20(outputToken).balanceOf(sandwich);
 
-        uint256 actualAmountIn = (amountIn /
-            sandwichHelper.wethEncodeMultiple()) *
-            sandwichHelper.wethEncodeMultiple();
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+        uint256 actualAmountIn = (amountIn / mevHelper.wethEncodeMultiple()) *
+            mevHelper.wethEncodeMultiple();
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOutV2(
             address(weth),
             outputToken,
+            uniswapV2Factory,
             actualAmountIn
         );
-        (, , uint256 expectedAmountOut) = sandwichHelper
-            .encodeNumToByteAndOffsetV2(amountOutFromEncoded, 4);
+        (, , uint256 expectedAmountOut) = mevHelper.encodeNumToByteAndOffsetV2(
+            amountOutFromEncoded,
+            4
+        );
 
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
         emit log_bytes(payloadV4);
         vm.startPrank(searcher);
@@ -163,22 +175,22 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 superFarmBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (uint256 encodedAmountIn, uint256 encodedByteShiftIn, ) = sandwichHelper
+        (uint256 encodedAmountIn, uint256 encodedByteShiftIn, ) = mevHelper
             .encodeNumToByteAndOffsetV2(superFarmBalanceBefore, 4);
         // intermediary token with dust
         encodedAmountIn -= 1;
         uint256 actualAmountIn = encodedAmountIn << (encodedByteShiftIn * 8);
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOutV2(
             inputToken,
             address(weth),
+            uniswapV2Factory,
             actualAmountIn
         );
         uint256 expectedAmountOut = (amountOutFromEncoded /
-            sandwichHelper.wethEncodeMultiple()) *
-            sandwichHelper.wethEncodeMultiple();
+            mevHelper.wethEncodeMultiple()) * mevHelper.wethEncodeMultiple();
 
         // Perform swap
-        (bytes memory payloadV4, uint256 encodedValue) = sandwichHelper
+        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsOutput(
                 inputToken,
                 superFarmBalanceBefore
@@ -228,22 +240,22 @@ contract SandwichTest is Test {
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         uint256 daiBalanceBefore = IERC20(inputToken).balanceOf(sandwich);
 
-        (uint256 encodedAmountIn, uint256 encodedByteShiftIn, ) = sandwichHelper
+        (uint256 encodedAmountIn, uint256 encodedByteShiftIn, ) = mevHelper
             .encodeNumToByteAndOffsetV2(daiBalanceBefore, 4);
         // intermediary token with dust
         encodedAmountIn -= 1;
         uint256 actualAmountIn = encodedAmountIn << (encodedByteShiftIn * 8);
-        uint256 amountOutFromEncoded = GeneralHelper.getAmountOut(
+        uint256 amountOutFromEncoded = GeneralHelper.getAmountOutV2(
             inputToken,
             address(weth),
+            uniswapV2Factory,
             actualAmountIn
         );
         uint256 expectedAmountOut = (amountOutFromEncoded /
-            sandwichHelper.wethEncodeMultiple()) *
-            sandwichHelper.wethEncodeMultiple();
+            mevHelper.wethEncodeMultiple()) * mevHelper.wethEncodeMultiple();
 
         // Perform swap
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsOutput(inputToken, daiBalanceBefore);
         emit log_bytes(payload);
         emit log_uint(encodedValue);
@@ -297,7 +309,7 @@ contract SandwichTest is Test {
         bytes memory payload;
         uint256 callvalue;
         for (uint i = 0; i < meats.length; i++) {
-            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+            (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsInput(
                     meats[i].intermediateToken,
                     meats[i].amountIn,
@@ -337,7 +349,7 @@ contract SandwichTest is Test {
             address inputToken = meats[i].intermediateToken;
             vm.prank(meats[i].faucet);
             IERC20(inputToken).transfer(sandwich, uint256(meats[i].amountIn));
-            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+            (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsOutput(
                     meats[i].intermediateToken,
                     meats[i].amountIn,
@@ -363,7 +375,7 @@ contract SandwichTest is Test {
 
         (address outputToken, address inputToken) = (token1, token0);
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsInput(
                 pool,
                 inputToken,
@@ -388,7 +400,7 @@ contract SandwichTest is Test {
 
         (address inputToken, address outputToken) = (token1, token0);
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsInput(
                 pool,
                 inputToken,
@@ -415,7 +427,7 @@ contract SandwichTest is Test {
         vm.startPrank(0x56556075Ab3e2Bb83984E90C52850AFd38F20883);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -442,7 +454,7 @@ contract SandwichTest is Test {
         vm.startPrank(0xD249942f6d417CbfdcB792B1229353B66c790726);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -461,15 +473,15 @@ contract SandwichTest is Test {
         address pool = 0x62CBac19051b130746Ec4CF96113aF5618F3A212;
         (address token0, address token1, uint24 fee) = GeneralHelper
             .getV3PoolInfo(pool);
-        (address inputToken, address outputToken) = (token1, token0);
+        (address inputToken, address outputToken) = (token0, token1);
 
-        int256 amountIn = 2.450740729522938570 ether; // 100000 btt
+        int256 amountIn = 2.450740729522938570 ether;
 
         // fund sandwich contract
-        vm.startPrank(0xD249942f6d417CbfdcB792B1229353B66c790726);
+        vm.startPrank(0xeBc37F4c20C7F8336E81fB3aDf82f6372BEf777E);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -496,7 +508,7 @@ contract SandwichTest is Test {
         vm.startPrank(binance14);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -521,7 +533,7 @@ contract SandwichTest is Test {
         vm.startPrank(0x25B313158Ce11080524DcA0fD01141EeD5f94b81);
         IERC20(inputToken).transfer(sandwich, uint256(amountIn));
 
-        (bytes memory payload, uint256 encodedValue) = sandwichHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v3CreateSandwichPayloadWethIsOutput(
                 pool,
                 inputToken,
@@ -557,7 +569,7 @@ contract SandwichTest is Test {
             (address inputToken, address outputToken) = token0 == address(weth)
                 ? (token0, token1)
                 : (token1, token0);
-            (bytes memory subPayload, ) = sandwichHelper
+            (bytes memory subPayload, ) = mevHelper
                 .v3CreateSandwichMultiMeatPayloadWethIsInput(
                     meats[i].pool,
                     inputToken,
@@ -613,7 +625,7 @@ contract SandwichTest is Test {
             vm.prank(meats[i].faucet);
             IERC20(inputToken).transfer(sandwich, uint256(meats[i].amountIn));
 
-            (bytes memory subPayload, ) = sandwichHelper
+            (bytes memory subPayload, ) = mevHelper
                 .v3CreateSandwichMultiMeatPayloadWethIsOutput(
                     meats[i].pool,
                     inputToken,
@@ -666,7 +678,7 @@ contract SandwichTest is Test {
         bytes memory payload;
         uint256 callvalue;
         for (uint i = 0; i < v2Meats.length; i++) {
-            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+            (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsInput(
                     v2Meats[i].intermediateToken,
                     v2Meats[i].amountIn,
@@ -681,7 +693,7 @@ contract SandwichTest is Test {
             (address inputToken, address outputToken) = token0 == address(weth)
                 ? (token0, token1)
                 : (token1, token0);
-            (bytes memory subPayload, ) = sandwichHelper
+            (bytes memory subPayload, ) = mevHelper
                 .v3CreateSandwichMultiMeatPayloadWethIsInput(
                     v3Meats[i].pool,
                     inputToken,
@@ -736,7 +748,7 @@ contract SandwichTest is Test {
                 sandwich,
                 uint256(v2meats1[i].amountIn)
             );
-            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+            (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsOutput(
                     v2meats1[i].intermediateToken,
                     v2meats1[i].amountIn,
@@ -755,7 +767,7 @@ contract SandwichTest is Test {
             vm.prank(v3meats[i].faucet);
             IERC20(inputToken).transfer(sandwich, uint256(v3meats[i].amountIn));
 
-            (bytes memory subPayload, ) = sandwichHelper
+            (bytes memory subPayload, ) = mevHelper
                 .v3CreateSandwichMultiMeatPayloadWethIsOutput(
                     v3meats[i].pool,
                     inputToken,
@@ -774,7 +786,7 @@ contract SandwichTest is Test {
                 sandwich,
                 uint256(v2meats2[i].amountIn)
             );
-            (bytes memory subPayload, uint encodedValue) = sandwichHelper
+            (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsOutput(
                     v2meats2[i].intermediateToken,
                     v2meats2[i].amountIn,
@@ -804,12 +816,11 @@ contract SandwichTest is Test {
 
         string memory functionName = "recoverWeth";
         bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
+            mevHelper.getJumpLabelFromSig(functionName)
         );
-        uint encodedValue = recoverAmount / sandwichHelper.wethEncodeMultiple();
-        uint realAmount = (recoverAmount /
-            sandwichHelper.wethEncodeMultiple()) *
-            sandwichHelper.wethEncodeMultiple();
+        uint encodedValue = recoverAmount / mevHelper.wethEncodeMultiple();
+        uint realAmount = (recoverAmount / mevHelper.wethEncodeMultiple()) *
+            mevHelper.wethEncodeMultiple();
         uint256 expectedAmountOut = sandwichEthBalance + realAmount;
         emit log_bytes(payload);
         (bool s, ) = sandwich.call{value: encodedValue}(payload);
@@ -837,10 +848,10 @@ contract SandwichTest is Test {
         uint amountDeposit = 0.1 ether;
         string memory functionName = "depositWeth";
         emit log_bytes(
-            abi.encodePacked(sandwichHelper.getJumpLabelFromSig(functionName))
+            abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName))
         );
         bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
+            mevHelper.getJumpLabelFromSig(functionName)
         );
         (bool s, ) = sandwich.call{value: amountDeposit}(payload);
         vm.stopPrank();
@@ -869,16 +880,14 @@ contract SandwichTest is Test {
 
         string memory functionName = "recoverEth";
         bytes memory payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
+            mevHelper.getJumpLabelFromSig(functionName)
         );
         (bool s, ) = sandwich.call(payload);
 
         assertFalse(s, "unauthorized addresses should not call recover eth");
 
         functionName = "recoverWeth";
-        payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
-        );
+        payload = abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName));
         (s, ) = sandwich.call(payload);
 
         assertFalse(
@@ -887,9 +896,7 @@ contract SandwichTest is Test {
         );
 
         functionName = "seppuku";
-        payload = abi.encodePacked(
-            sandwichHelper.getJumpLabelFromSig(functionName)
-        );
+        payload = abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName));
         (s, ) = sandwich.call(payload);
 
         assertFalse(
@@ -899,5 +906,52 @@ contract SandwichTest is Test {
         changePrank(searcher);
         (s, ) = sandwich.call(payload);
         assertTrue(s, "calling recoverEth from searcher failed");
+    }
+
+    function testV2Arbitrage() public {
+
+        uint256 wethBalanceBefore = weth.balanceOf(sandwich);
+        vm.startPrank(searcher, searcher);
+        address intermediaryToken = 0x249e38Ea4102D0cf8264d3701f1a0E39C4f2DC3B;
+        V2Path[2] memory path = [
+            V2Path(
+                address(weth),
+                intermediaryToken,
+                uniswapV2Factory
+            ),
+            V2Path(
+                intermediaryToken,
+                address(weth),
+                shibaV2Factory
+            )
+        ];
+        uint amountIn = 0.292721430179610624 ether;
+        uint encodedValue = amountIn / mevHelper.wethEncodeMultiple();
+        uint actualAmountIn = encodedValue * mevHelper.wethEncodeMultiple();
+        bytes memory payload = abi.encodePacked(
+            mevHelper.getJumpLabelFromSig("prepare_stack"),
+            mevHelper.getJumpLabelFromSig("arbitrage_weth_input"),
+            uint40(encodedValue)
+        );
+        for (uint i = 0; i < path.length; i++) {
+            bool isTail = i == path.length - 1;
+            (bytes memory subPayload, uint encodedAmountOut) = mevHelper.v2CreateArbitragePayload(
+                path[i].inputToken,
+                path[i].outputToken,
+                path[i].factory,
+                isTail,
+                actualAmountIn
+            );
+            payload = abi.encodePacked(payload, subPayload);
+            actualAmountIn = encodedAmountOut;
+        }
+        uint8 endPayload = 37;
+        payload = abi.encodePacked(payload, endPayload);
+        emit log_bytes(payload);
+        (bool s, ) = sandwich.call(payload);
+        assertTrue(s, "calling arbitrage failed");
+        uint256 wethBalanceAfter = weth.balanceOf(sandwich);
+        emit log_uint(wethBalanceBefore);
+        emit log_uint(wethBalanceAfter);
     }
 }

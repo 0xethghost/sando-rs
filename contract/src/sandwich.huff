@@ -114,6 +114,18 @@
         v3_output1_multi
         jump
 
+    arbitrage_weth_input_gate:
+        arbitrage_weth_input
+        jump
+
+    arbitrage_v2_swap_to_other_gate:
+        arbitrage_v2_swap_to_other
+        jump
+
+    arbitrage_v2_swap_to_this_gate:
+        arbitrage_v2_swap_to_this
+        jump
+
     seppuku_gate:
         seppuku                                     // [seppuku_label]
         jump                                        // []
@@ -129,10 +141,7 @@
     // calldata: int256 amount0Delta, int256 amount1Delta, bytes data
     v3_callback:
         [SEARCHER] origin eq
-        iszero 
-        0x02                                        // [2]
-        dup1                                        // [2, 2]
-        revert                                      // revert (2,2) for wagmi
+        iszero gtfo2 jumpi
         // Extract pool_key_hash for msg.sender validation
         0x99 calldataload
 
@@ -1035,7 +1044,7 @@
         dup1
         revert
 
-    arbitrage_v2_swap_to_address:
+    arbitrage_v2_swap_to_this:
         // setup calldata for swap(amountOut0, amountOut1, address(this), "")
         0x00 0x04 mstore
         0x00 0x24 mstore                            // clear memory

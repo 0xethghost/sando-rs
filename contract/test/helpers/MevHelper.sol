@@ -7,7 +7,7 @@ import "./GeneralHelper.sol";
 
 //import "forge-std/console.sol";
 
-contract SandwichHelper {
+contract MevHelper {
     mapping(string => uint8) internal functionSigsToJumpLabel;
 
     constructor() {
@@ -104,7 +104,9 @@ contract SandwichHelper {
         bool isFirstOfPayload
     ) public returns (bytes memory payload, uint256 encodedValue) {
         if (isFirstOfPayload)
-            payload = abi.encodePacked(functionSigsToJumpLabel["v3_multi_pre"]);
+            payload = abi.encodePacked(
+                functionSigsToJumpLabel["prepare_stack"]
+            );
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
@@ -153,7 +155,9 @@ contract SandwichHelper {
         bool isFirstOfPayload
     ) public returns (bytes memory payload, uint256 encodedValue) {
         if (isFirstOfPayload)
-            payload = abi.encodePacked(functionSigsToJumpLabel["v3_multi_pre"]);
+            payload = abi.encodePacked(
+                functionSigsToJumpLabel["prepare_stack"]
+            );
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
@@ -249,7 +253,12 @@ contract SandwichHelper {
             uint256 encodedByteShift,
 
         ) = encodeNumToByteAndOffsetV2(
-                GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
+                GeneralHelper.getAmountOutV2(
+                    weth,
+                    otherToken,
+                    address(univ2Factory),
+                    amountInActual
+                ),
                 4
             );
 
@@ -305,9 +314,10 @@ contract SandwichHelper {
             uint32(encodedAmountIn) // amountIn
         );
 
-        uint256 amountOut = GeneralHelper.getAmountOut(
+        uint256 amountOut = GeneralHelper.getAmountOutV2(
             otherToken,
             weth,
+            address(univ2Factory),
             amountInActual
         );
         encodedValue = amountOut / wethEncodeMultiple();
@@ -339,7 +349,12 @@ contract SandwichHelper {
             uint256 encodedByteShift,
 
         ) = encodeNumToByteAndOffsetV2(
-                GeneralHelper.getAmountOut(weth, otherToken, amountInActual),
+                GeneralHelper.getAmountOutV2(
+                    weth,
+                    otherToken,
+                    address(univ2Factory),
+                    amountInActual
+                ),
                 4
             );
         uint encodedAmountIn = amountIn / wethEncodeMultiple();
@@ -406,7 +421,12 @@ contract SandwichHelper {
             uint256 encodedByteShiftOut,
 
         ) = encodeNumToByteAndOffsetV2(
-                GeneralHelper.getAmountOut(otherToken, weth, amountInActual),
+                GeneralHelper.getAmountOutV2(
+                    otherToken,
+                    weth,
+                    address(univ2Factory),
+                    amountInActual
+                ),
                 5
             );
         console.log(encodedByteShiftOut);
@@ -452,7 +472,7 @@ contract SandwichHelper {
         bool isFirstOfPayload,
         bool isWethInput,
         address otherToken
-    ) internal view returns (uint8 encodeAmount) {
+    ) internal view returns (uint8) {
         address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         if (isWethInput) {
             if (isMultimeat) {
@@ -476,6 +496,50 @@ contract SandwichHelper {
                     return functionSigsToJumpLabel["v2_output1_single"];
                 }
             }
+        }
+    }
+
+    function v2CreateArbitragePayload(
+        address inputToken,
+        address outputToken,
+        address factory,
+        bool isTail,
+        uint amountIn
+    ) public view returns (bytes memory payload, uint encodedAmountOut) {
+        uint amountOut = GeneralHelper.getAmountOutV2(
+            inputToken,
+            outputToken,
+            factory,
+            amountIn
+        );
+        (
+            uint256 encodedAmount,
+            uint256 encodedByteShift,
+            uint256 amountAfterEncoding
+        ) = encodeNumToByteAndOffsetV2(amountOut, 4);
+        uint8 swapType = _v2FindArbFunctionSig(isTail);
+        bool isZeroForOne = inputToken < outputToken;
+        uint memOffset;
+        if(isZeroForOne) {
+            memOffset = 68 - 4 - encodedByteShift;
+        } else{
+            memOffset = 36 - 4 - encodedByteShift;
+        }
+        address pool = GeneralHelper.getV2Pair(inputToken, outputToken, factory);
+        payload = abi.encodePacked(
+            uint8(swapType),
+            uint8(memOffset),
+            address(pool),
+            uint32(encodedAmount)
+        );
+        encodedAmountOut = amountAfterEncoding;
+    }
+
+    function _v2FindArbFunctionSig(bool isTail) internal view returns (uint8) {
+        if (isTail) {
+            return functionSigsToJumpLabel["arbitrage_v2_swap_to_this"];
+        } else {
+            return functionSigsToJumpLabel["arbitrage_v2_swap_to_other"];
         }
     }
 
@@ -548,7 +612,7 @@ contract SandwichHelper {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[19] memory functionNames = [
+        string[22] memory functionNames = [
             "v2_input_single",
             "v2_output0_single",
             "v2_output1_single",
@@ -560,11 +624,14 @@ contract SandwichHelper {
             "v2_input_multi_next",
             "v2_output_multi_first",
             "v2_output_multi_next",
-            "v3_multi_pre",
+            "prepare_stack",
             "v3_input0_multi",
             "v3_input1_multi",
             "v3_output0_multi",
             "v3_output1_multi",
+            "arbitrage_weth_input",
+            "arbitrage_v2_swap_to_other",
+            "arbitrage_v2_swap_to_this",
             "seppuku",
             "recoverWeth",
             "depositWeth"
