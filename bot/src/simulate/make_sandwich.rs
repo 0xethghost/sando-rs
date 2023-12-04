@@ -53,6 +53,7 @@ pub async fn create_optimal_sandwich(
         // can also inject new sandwich code for testing
         crate::prelude::inject_sando(fork_factory, upper_bound);
     }
+    let mut good_ingredients: Vec<RawIngredients> = vec![];
     for ingredients in multi_ingredients.iter() {
         let optimal = juiced_quadratic_search(
             ingredients,
@@ -62,10 +63,10 @@ pub async fn create_optimal_sandwich(
             fork_factory,
         )
         .await?;
-        // if optimal.is_zero() {
-        //     return Err(SimulationError::ZeroOptimal());
-        //     // continue;
-        // }
+        match optimal.is_zero() {
+            false => good_ingredients.push(ingredients.to_owned()),
+            true => continue,
+        }
         upper_bound = match upper_bound.checked_sub(optimal) {
             Some(amount) => amount,
             None => U256::zero(),
@@ -73,10 +74,14 @@ pub async fn create_optimal_sandwich(
         optimals.push(optimal);
     }
 
+    if good_ingredients.is_empty() {
+        return Err(SimulationError::ZeroOptimal());
+    }
+
     sanity_check(
         sandwich_balance,
         optimals,
-        multi_ingredients,
+        &mut good_ingredients,
         next_block,
         sandwich_maker,
         fork_factory.new_sandbox_fork(),
@@ -283,7 +288,8 @@ fn sanity_check(
         let token_in = ingredients.startend_token;
         let token_out = ingredients.intermediary_token;
         // set token has dust in pools
-        let token_out_balance = get_balance_of_evm(token_out, sandwich_contract, next_block, &mut evm)?;
+        let token_out_balance =
+            get_balance_of_evm(token_out, sandwich_contract, next_block, &mut evm)?;
         if token_out_balance > U256::zero() {
             ingredients.target_pool.has_dust = true;
         }
