@@ -16,6 +16,7 @@ use crate::types::{BlockInfo, SimulationError};
 use crate::utils::constants::{get_end_of_multi_payload, get_weth_address};
 use crate::utils::dotenv;
 use crate::utils::tx_builder::{self, braindance, SandwichMaker};
+use hex::ToHex;
 
 use super::{
     attach_braindance_module, braindance_address, braindance_controller_address,
@@ -260,7 +261,8 @@ fn sanity_check(
     let end_of_multi_payload = get_end_of_multi_payload();
     let mut frontrun_data: Vec<u8> = Vec::new();
     let mut frontrun_value: U256 = U256::from(0);
-    let is_multiple = multi_ingredients.len() > 1;
+    let ingredients_len: u64 = multi_ingredients.len() as u64;
+    let is_multiple = ingredients_len > 1;
 
     // prepare frontrun data and value
     for (index, ingredients) in multi_ingredients.iter_mut().enumerate() {
@@ -359,7 +361,7 @@ fn sanity_check(
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
     evm.env.tx.data = frontrun_data.clone().into();
     evm.env.tx.value = frontrun_value.into();
-    evm.env.tx.gas_limit = 700000;
+    evm.env.tx.gas_limit = 700000 * ingredients_len;
     evm.env.tx.gas_price = next_block.base_fee.into();
     evm.env.tx.access_list = Vec::default();
     // evm.env.tx.chain_id = Some(1_u64);
@@ -382,6 +384,8 @@ fn sanity_check(
     match frontrun_result {
         ExecutionResult::Success { .. } => { /* continue operation */ }
         ExecutionResult::Revert { output, .. } => {
+            println!("{:02x?}", frontrun_data.encode_hex::<String>());
+            println!("{:?}", frontrun_value);
             return Err(SimulationError::FrontrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => {
@@ -440,6 +444,8 @@ fn sanity_check(
             }
         }
     }
+    good_meats.sort_by(|a, b| a.hash.cmp(&b.hash));
+    good_meats.dedup();
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    BACKRUN TRANSACTION                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

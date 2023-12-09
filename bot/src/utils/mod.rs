@@ -69,10 +69,3 @@ pub async fn create_websocket_client() -> eyre::Result<Arc<Provider<Ws>>> {
     let client = dotenv::get_ws_provider().await;
     Ok(Arc::new(client))
 }
-
-pub async fn get_nonce(
-    client: &Arc<Provider<Ws>>,
-    address: Address,
-) -> Result<U256, ProviderError> {
-    client.get_transaction_count(address, None).await
-}

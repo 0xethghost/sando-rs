@@ -59,6 +59,7 @@ impl BundleSender {
         sandwich_state: Arc<BotState>,
         sandwich_maker: Arc<SandwichMaker>,
     ) {
+        log::info!("Making mega sandwich for {}", &next_block.number);
         let mut multi_ingredients: Vec<RawIngredients> = Vec::<RawIngredients>::new();
         let mut multi_combined_state_diffs: BTreeMap<H160, AccountDiff> = BTreeMap::new();
         for (target_pool, recipes) in self.pending_sandwiches.iter() {
@@ -92,7 +93,7 @@ impl BundleSender {
             };
 
             // create raw ingredients
-            let meats = recipes
+            let meats: Vec<Transaction> = recipes
                 .iter()
                 .flat_map(|recipe| recipe.meats.clone())
                 .collect();
@@ -140,16 +141,23 @@ impl BundleSender {
         .await
         {
             Ok(optimal) => optimal,
-            Err(_) => {
+            Err(e) => {
+                log::info!(
+                    "End of making mega sandwich for {} due to create optimal sandwich error {}",
+                    &next_block.number,
+                    e
+                );
+
                 return;
             }
         };
         // optimal_sandwich.set_has_dust(has_dust);
 
         // if revenue is non zero send multi-meat sandwich to relays
-        // // could cleanup this code because a lot of copy + pasting from runner/mod.rs
+        // could cleanup this code because a lot of copy + pasting from runner/mod.rs
+        let next_block_two = next_block.clone();
         // tokio::spawn(async move {
-        if optimal_sandwich.revenue != U256::zero() {
+        if optimal_sandwich.revenue > U256::zero() {
             match send_bundle(
                 &optimal_sandwich,
                 next_block,
@@ -173,6 +181,7 @@ impl BundleSender {
             };
         }
         // });
+        log::info!("End of making mega sandwich for {}", &next_block_two.number);
     }
 }
 
@@ -261,7 +270,7 @@ pub async fn send_bundle(
         "{}",
         format!("{:?} nonce {:?} ", recipe.print_meats(), nonce)
             .blue()
-            .on_yellow()
+            .on_bright_magenta()
     );
     log::info!(
         "{}",
@@ -271,8 +280,7 @@ pub async fn send_bundle(
             format_units(recipe.revenue, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -282,8 +290,7 @@ pub async fn send_bundle(
             format_units(cost, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -293,8 +300,7 @@ pub async fn send_bundle(
             format_units(frontrun_transaction_fee, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -305,7 +311,7 @@ pub async fn send_bundle(
         )
         .bold()
         .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -316,7 +322,7 @@ pub async fn send_bundle(
         )
         .bold()
         .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
 
     // send bundle to all relay endpoints (concurrently)
@@ -425,7 +431,7 @@ fn calculate_bribe_for_max_fee(
     // more info: https://twitter.com/libevm/status/1474870661373779969
     for pool in recipe.target_pools.iter() {
         if !pool.has_dust {
-            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000;
+            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000 * 3 / 2;
         }
     }
     let mut rng = rand::thread_rng();
@@ -455,7 +461,7 @@ fn calculate_bribe_for_max_fee(
             format_units(max_fee, "gwei").unwrap()
         )
         .yellow()
-        .on_blue()
+        .on_green()
     );
     log::info!(
         "{}",
@@ -465,7 +471,7 @@ fn calculate_bribe_for_max_fee(
             format_units(effective_miner_tip.unwrap(), "gwei").unwrap()
         )
         .yellow()
-        .on_blue()
+        .on_green()
     );
 
     Ok(max_fee)

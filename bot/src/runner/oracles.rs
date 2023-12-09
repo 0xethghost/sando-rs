@@ -33,7 +33,6 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
             } else {
                 panic!("Failed to create new block stream");
             };
-
             while let Some(block) = block_stream.next().await {
                 // lock the RwLock for write access and update the variable
                 {
@@ -62,9 +61,6 @@ pub fn start_block_oracle(oracle: &mut Arc<RwLock<BlockOracle>>, sandwich_state:
                     if sandwich_balance > U256::from(4500000000000000000u128) {
                         let sandwich_address = utils::dotenv::get_sandwich_contract_address();
                         let searcher_wallet = utils::dotenv::get_searcher_wallet();
-                        // let nonce = utils::get_nonce(&client, searcher_wallet.address())
-                        //     .await
-                        //     .unwrap();
                         let recover_amount = U256::from(500000000000000000i64);
                         let (payload, value) = get_recover_weth_payload_value(recover_amount);
                         let tx = TransactionRequest::new()
@@ -190,8 +186,7 @@ pub fn start_mega_sandwich_oracle(
                     let mut bundle_sender_guard = bundle_sender.write().await;
                     bundle_sender_guard.pending_sandwiches.clear();
                 } // lock removed here
-
-                // 10.5 seconds from when new block was detected, caluclate mega sandwich
+                  // 10.5 seconds from when new block was detected, caluclate mega sandwich
                 tokio::time::sleep(Duration::from_millis(10_500)).await;
                 let next_block_info = BlockInfo::find_next_block_info(block);
                 {

@@ -106,8 +106,6 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
-            // use std::time::Instant;
-            // let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) => continue,
@@ -250,19 +248,13 @@ impl Bot {
                     // let sandwich_maker = sandwich_maker.clone();
                     if optimal_sandwich.revenue > U256::zero() {
                         let bundle_sender = bundle_sender.clone();
+                        // tokio::spawn(async move {
                         bundle_sender
                             .write()
                             .await
                             .add_recipe(optimal_sandwich_two, sandwichable_pool.pool)
                             .await;
-                        log::info!(
-                            "{}",
-                            format!(
-                                "{:?} added to bundle sender",
-                                optimal_sandwich.print_meats()
-                            )
-                            .bright_magenta()
-                        );
+                        // });
                         tokio::spawn(async move {
                             match bundle_sender::send_bundle(
                                 &optimal_sandwich,
@@ -286,19 +278,6 @@ impl Bot {
                                 }
                             };
                         });
-                        // let bundle_sender = bundle_sender.clone();
-                        // tokio::spawn(async move {
-                        //     bundle_sender
-                        //         .write()
-                        //         .await
-                        //         .add_recipe(optimal_sandwich_two)
-                        //         .await;
-                        // });
-                        // let elpased = now.elapsed();
-                        // log::info!(
-                        //     "{}",
-                        //     format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased)
-                        // );
                     }
                 });
             }
