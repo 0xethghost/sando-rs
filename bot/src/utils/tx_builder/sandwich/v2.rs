@@ -73,8 +73,6 @@ impl SandwichLogicV2 {
         ]);
 
         let encoded_call_value = amount_in.div(get_weth_encode_divisor());
-        // log::info!("{}", format!("[Frontrun payload] {:02x?}", payload));
-        // log::info!("{}", format!("[Frontrun value] {:?}", encoded_call_value));
         (payload, encoded_call_value)
     }
 

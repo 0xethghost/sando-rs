@@ -145,19 +145,19 @@ impl SandwichLogicV3 {
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
             utils::PackedToken::NumberWithShift(
-                U256::from((32 - 4 - encoded_amount_out_swap_value.byte_shift.as_u64()) * 8),
-                utils::TakeLastXBytes(8),
-            ),
-            utils::PackedToken::NumberWithShift(
-                encoded_amount_out_swap_value.encoded_value,
-                utils::TakeLastXBytes(32),
-            ),
-            utils::PackedToken::NumberWithShift(
-                U256::from((32 - 5 - encoded_amount_in_swap_value.byte_shift.as_u64()) * 8),
+                U256::from((32 - 4 - encoded_amount_in_swap_value.byte_shift.as_u64()) * 8),
                 utils::TakeLastXBytes(8),
             ),
             utils::PackedToken::NumberWithShift(
                 encoded_amount_in_swap_value.encoded_value,
+                utils::TakeLastXBytes(32),
+            ),
+            utils::PackedToken::NumberWithShift(
+                U256::from((32 - 5 - encoded_amount_out_swap_value.byte_shift.as_u64()) * 8),
+                utils::TakeLastXBytes(8),
+            ),
+            utils::PackedToken::NumberWithShift(
+                encoded_amount_out_swap_value.encoded_value,
                 utils::TakeLastXBytes(40),
             ),
             utils::PackedToken::Bytes(&pool_key_hash),

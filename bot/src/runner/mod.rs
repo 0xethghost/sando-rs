@@ -90,12 +90,17 @@ impl Bot {
         log::info!("Starting bot");
 
         oracles::start_add_new_pools(&mut self.all_pools, self.dexes.clone());
-        oracles::start_block_oracle(&mut self.latest_block_oracle, self.sandwich_state.clone());
-        oracles::start_mega_sandwich_oracle(
+        oracles::start_block_oracle(
             self.bundle_sender.clone(),
+            &mut self.latest_block_oracle,
             self.sandwich_state.clone(),
-            self.sandwich_maker.clone(),
+            self.sandwich_maker.clone()
         );
+        // oracles::start_mega_sandwich_oracle(
+        //     self.bundle_sender.clone(),
+        //     self.sandwich_state.clone(),
+        //     self.sandwich_maker.clone(),
+        // );
 
         let mut mempool_stream = if let Ok(stream) =
             rpc_extensions::subscribe_pending_txs_with_body(&self.client).await

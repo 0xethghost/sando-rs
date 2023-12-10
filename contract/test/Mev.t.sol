@@ -645,20 +645,13 @@ contract SandwichTest is Test {
     }
 
     function testHybridMultiMeatInput() public {
-        V2Meat[2] memory v2Meats = [
+        V2Meat[1] memory v2Meats1 = [
             V2Meat(
                 0xdAC17F958D2ee523a2206206994597C13D831ec7,
                 address(0),
                 1.94212341234123424 ether,
                 true,
                 true
-            ),
-            V2Meat(
-                0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
-                address(0),
-                0.942 ether,
-                false,
-                false
             )
         ];
         V3Meat[2] memory v3Meats = [
@@ -675,14 +668,23 @@ contract SandwichTest is Test {
                 false
             )
         ];
+        V2Meat[1] memory v2Meats2 = [
+            V2Meat(
+                0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+                address(0),
+                0.942 ether,
+                false,
+                false
+            )
+        ];
         bytes memory payload;
         uint256 callvalue;
-        for (uint i = 0; i < v2Meats.length; i++) {
+        for (uint i = 0; i < v2Meats1.length; i++) {
             (bytes memory subPayload, uint encodedValue) = mevHelper
                 .v2CreateSandwichMultiPayloadWethIsInput(
-                    v2Meats[i].intermediateToken,
-                    v2Meats[i].amountIn,
-                    v2Meats[i].isFirstOfPayload
+                    v2Meats1[i].intermediateToken,
+                    v2Meats1[i].amountIn,
+                    v2Meats1[i].isFirstOfPayload
                 );
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
@@ -702,6 +704,16 @@ contract SandwichTest is Test {
                     v3Meats[i].amountIn,
                     v3Meats[i].isFirstOfPayload
                 );
+            payload = abi.encodePacked(payload, subPayload);
+        }
+        for (uint i = 0; i < v2Meats2.length; i++) {
+            (bytes memory subPayload, uint encodedValue) = mevHelper
+                .v2CreateSandwichMultiPayloadWethIsInput(
+                    v2Meats2[i].intermediateToken,
+                    v2Meats2[i].amountIn,
+                    v2Meats2[i].isFirstOfPayload
+                );
+            callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
         uint8 endPayload = 37;
@@ -803,6 +815,34 @@ contract SandwichTest is Test {
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
         assertTrue(s, "calling hybrid weth output multimeat swap failed");
+    }
+
+    function testCustomPayload() public {
+        // vm.roll(18749420);
+        bytes memory payload = new bytes(97);
+        assembly {
+            mstore(
+                add(payload, 0x20),
+                0x5e686ce6d6d40a4c4088309293b0582372a2e6bb632ec001bb4b49b81bc509a4
+            )
+            mstore(
+                add(payload, 0x40),
+                0x87273578eb037866e05c734752faa0a2bce4a1d33c74a7e99e98833b6c1f6fc9
+            )
+            mstore(
+                add(payload, 0x60),
+                0xc94f1c25041cbfd7dfdca70713bf6f991807aa4d018116030eb2280000242cca
+            )
+            mstore(
+                add(payload, 0x80),
+                0x2500000000000000000000000000000000000000000000000000000000000000
+            )
+        }
+        emit log_bytes(payload);
+        uint callvalue = 0;
+        vm.prank(searcher, searcher);
+        (bool s, ) = address(sandwich).call{value: callvalue}(payload);
+        assertTrue(s, "calling custom payload multimeat swap failed");
     }
 
     // Test by recovering the initial funded amount
@@ -909,21 +949,12 @@ contract SandwichTest is Test {
     }
 
     function testV2Arbitrage() public {
-
         uint256 wethBalanceBefore = weth.balanceOf(sandwich);
         vm.startPrank(searcher, searcher);
         address intermediaryToken = 0x249e38Ea4102D0cf8264d3701f1a0E39C4f2DC3B;
         V2Path[2] memory path = [
-            V2Path(
-                address(weth),
-                intermediaryToken,
-                uniswapV2Factory
-            ),
-            V2Path(
-                intermediaryToken,
-                address(weth),
-                shibaV2Factory
-            )
+            V2Path(address(weth), intermediaryToken, uniswapV2Factory),
+            V2Path(intermediaryToken, address(weth), shibaV2Factory)
         ];
         uint amountIn = 0.292721430179610624 ether;
         uint encodedValue = amountIn / mevHelper.wethEncodeMultiple();
@@ -935,13 +966,14 @@ contract SandwichTest is Test {
         );
         for (uint i = 0; i < path.length; i++) {
             bool isTail = i == path.length - 1;
-            (bytes memory subPayload, uint encodedAmountOut) = mevHelper.v2CreateArbitragePayload(
-                path[i].inputToken,
-                path[i].outputToken,
-                path[i].factory,
-                isTail,
-                actualAmountIn
-            );
+            (bytes memory subPayload, uint encodedAmountOut) = mevHelper
+                .v2CreateArbitragePayload(
+                    path[i].inputToken,
+                    path[i].outputToken,
+                    path[i].factory,
+                    isTail,
+                    actualAmountIn
+                );
             payload = abi.encodePacked(payload, subPayload);
             actualAmountIn = encodedAmountOut;
         }

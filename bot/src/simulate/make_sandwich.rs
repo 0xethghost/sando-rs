@@ -64,14 +64,14 @@ pub async fn create_optimal_sandwich(
             fork_factory,
         )
         .await?;
-        match optimal.is_zero() {
-            false => good_ingredients.push(ingredients.to_owned()),
-            true => continue,
+        if optimal.is_zero() {
+            continue;
         }
         upper_bound = match upper_bound.checked_sub(optimal) {
             Some(amount) => amount,
             None => U256::zero(),
         };
+        good_ingredients.push(ingredients.to_owned());
         optimals.push(optimal);
     }
 
@@ -386,6 +386,7 @@ fn sanity_check(
         ExecutionResult::Revert { output, .. } => {
             println!("{:02x?}", frontrun_data.encode_hex::<String>());
             println!("{:?}", frontrun_value);
+            println!("{:?}", frontrun_ins);
             return Err(SimulationError::FrontrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => {
