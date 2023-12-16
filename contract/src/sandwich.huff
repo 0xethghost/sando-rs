@@ -37,9 +37,9 @@
     jump
     
     sandwich_entry_point:
-        returndatasize
+        0x00
         calldataload
-        returndatasize
+        0x00
         byte
         jump
 
@@ -147,12 +147,12 @@
 
         // uniswap v3
         // setup variables for keccak256("FF", factory_addr, pool_Key_hash, pair_hash)
-        [UNISWAP_V3_FACTORY] returndatasize mstore  // [pool_key_hash] *mstore(0, ff + FACTORY)
+        [UNISWAP_V3_FACTORY] 0x00 mstore  // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
         [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
-        0x55 returndatasize sha3                    // [keccak256_result]
+        0x55 0x00 sha3                    // [keccak256_result]
         0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         and                                         // [pair_addr]
 
@@ -161,12 +161,12 @@
         v3_callback_token_transfer jumpi            // [] * Check if msg.sender is pool
         // pancake v3
         0x15 mload
-        [PANCAKE_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
+        [PANCAKE_V3_FACTORY] 0x00 mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
         [PANCAKE_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
-        0x55 returndatasize sha3                              // [keccak256_result]
+        0x55 0x00 sha3                              // [keccak256_result]
         0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         and                                         // [pair_addr]
 
@@ -175,12 +175,12 @@
         v3_callback_token_transfer jumpi            // [] * Check if msg.sender is pool
         // sushiswap v3
         0x15 mload
-        [SUSHISWAP_V3_FACTORY] returndatasize mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
+        [SUSHISWAP_V3_FACTORY] 0x00 mstore                // [pool_key_hash] *mstore(0, ff + FACTORY)
         0x15 mstore                                 // [pool_key_hash] *mstore(21, POOLKEYHASH)
         [UNISWAP_PAIR_INIT_CODE_HASH] 0x35 mstore   // [] *mstore(53, PAIR_HASH)
 
         // call keccak256 and transform result to address
-        0x55 returndatasize sha3                              // [keccak256_result]
+        0x55 0x00 sha3                              // [keccak256_result]
         0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         and                                         // [pair_addr]
 
@@ -191,11 +191,11 @@
 
     v3_callback_token_transfer:
         // setup stack for when we call inputToken.transfer
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0x44    // 100 (4+32+32)                    // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
 
         // *** extract inputToken address
         // inputToken address bit mask
@@ -211,7 +211,7 @@
         //
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x23b872dd)
+        [TRANSFER_SIG] 0x00 mstore        // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x23b872dd)
         caller 0x04 mstore                          // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(36, msg.sender)
         0x24 calldataload 0x24 mstore               // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(56, amount1Delta)
 
@@ -232,7 +232,7 @@
         //
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x23b872dd)
+        [TRANSFER_SIG] 0x00 mstore        // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x23b872dd)
         caller 0x04 mstore                          // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(36, msg.sender)
         0x04 calldataload 0x24 mstore               // [token_in_addr, value, argoffset, argsize, retoffset, retsize] - mstore(56, amount0Delta)
 
@@ -245,25 +245,25 @@
         
     v2_input_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata for transferFrom(from,to,value)
-        [TRANSFER_FROM_SIG] returndatasize mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
+        [TRANSFER_FROM_SIG] 0x00 mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
         address 0x04 mstore                         // [*token_transfer_args, *pair_swap_args] - mstore(4, address(this))
         callvalue 0x40 mstore                       // [*token_transfer_args, *pair_swap_args] - mstore(68, callvalue * 100000)
         dup1 0x24 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // call weth transferFrom
-        returndatasize                              // [retsize, *pair_swap_args]
-        returndatasize                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [retsize, *pair_swap_args]
+        0x00                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x64    // 100 (4+32+32+32)                 // [argsize, retoffset, retsize, *pair_swap_args] !expanded token_transfer_args
-        returndatasize                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
         [WETH]                                      // [weth_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         gas                                         // [gas, weth_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         call pop                                    // [*pair_swap_args]
@@ -293,28 +293,28 @@
 
     v2_output0_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, TRANSFER_SIG)
+        [TRANSFER_SIG] 0x00 mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, TRANSFER_SIG)
         dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(4, pair_address)
 
         // get amountIn and store at memOffset
         0x2a calldataload                           // extract encodedValue by removing memOffset
         chainid calldataload                        
-        returndatasize byte mstore                  // extract memOffset and perform mstore
+        0x00 byte mstore                  // extract memOffset and perform mstore
 
         // call tokenIn transferFrom
-        returndatasize                              // [retsize, *pair_swap_args]
-        returndatasize                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [retsize, *pair_swap_args]
+        0x00                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x44    // 68 (4+32+32)                     // [argsize, retoffset, retsize, *pair_swap_args] !expanded token_transfer_args
-        returndatasize                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x16 calldataload 0x60 shr                  // [token_in_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         call pop                                    // [*pair_swap_args]
@@ -337,28 +337,28 @@
 
     v2_output1_single:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffseifwWIs12d&R9H@^t, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffseifwWIs12d&R9H@^t, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
+        [TRANSFER_SIG] 0x00 mstore        // [*token_transfer_args, *pair_swap_args] - mstore(0, 0xa9059cbb)
         dup1 0x04 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // get amountIn and store at memOffset
         0x2a calldataload
         chainid calldataload                        // extract encodedValue by removing memOffset
-        returndatasize byte mstore                  // extract memOffset and perform mstore
+        0x00 byte mstore                  // extract memOffset and perform mstore
 
         // call tokenIn transfer
-        returndatasize                              // [retsize, *pair_swap_args]
-        returndatasize                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [retsize, *pair_swap_args]
+        0x00                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x44     // 68 (4+32+32)                    // [argsize, retoffset, retsize, *pair_swap_args] !expanded token_transfer_args
-        returndatasize                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x16 calldataload 0x60 shr                  // [token_in_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         gas                                         // [gas, token_in_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         call pop                                    // [*pair_swap_args]
@@ -381,11 +381,11 @@
 
     v2_input_multi_first:
         // ***Preset the stack for when we call pair.swap(token0Out, token1Out, to, data)***
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // extract amount out
@@ -394,24 +394,24 @@
         and
         // extract amount out mem offset
         chainid calldataload                        // extract encodedValue by removing memOffset
-        returndatasize 
+        0x00 
 
-        returndatasize
-        returndatasize
-        [V2_SWAP_SIG_32] returndatasize
+        0x00
+        0x00
+        [V2_SWAP_SIG_32] 0x00
 
         // setup calldata for transferFrom(from,to,value)
-        [TRANSFER_FROM_SIG] returndatasize mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
+        [TRANSFER_FROM_SIG] 0x00 mstore   // [*token_transfer_args, *pair_swap_args] - mstore(0, 0x23b872dd)
         address 0x04 mstore                         // [*token_transfer_args, *pair_swap_args] - mstore(4, address(this))
         callvalue 0x40 mstore                       // [*token_transfer_args, *pair_swap_args] - mstore(68, callvalue * 0x1000000000)
         dup8 0x24 mstore                            // [*token_transfer_args, *pair_swap_args] - mstore(36, pair_address)
 
         // call weth transferFrom
-        returndatasize                              // [retsize, *pair_swap_args]
-        returndatasize                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [retsize, *pair_swap_args]
+        0x00                              // [retoffset, retsize, *pair_swap_args] = token_transfer_args
         0x64    // 100 (4+32+32+32)                 // [argsize, retoffset, retsize, *pair_swap_args] !expanded token_transfer_args
-        returndatasize                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
+        0x00                              // [argoffset, argsize, retoffset, retsize, *pair_swap_args]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize, *pair_swap_args] = token_transfer_args
         [WETH]                                      // [weth_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         gas                                         // [gas, weth_addr, value, argoffset, argsize, retoffset, retsize, *pair_swap_args]
         call pop                                    // [*pair_swap_args]
@@ -501,27 +501,30 @@
         revert
 
     v2_output_multi_first:
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0xA4  // 164 (4 + 32 + 32 + 32 + {32 + 32}) // [argsize, retoffset, retsize]
         0x40                                        // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
 
         // setup calldata (in memory) for transfer(to,value)
-        [TRANSFER_SIG] returndatasize mstore        // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, TRANSFER_SIG)
-        0x2a calldataload
-        chainid calldataload                        // [token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
-        returndatasize byte                         // [memOffset, token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
-        mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(memOffset, token_amount_in)
+        [TRANSFER_SIG] 0x00 mstore        // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, TRANSFER_SIG)
         dup1 0x04 mstore                            // mstore(0x04, pair_address)
+        // get amountIn and store at memOffset
+        0x2a calldataload
+        0xffffffff00000000000000000000000000000000000000000000000000000000
+        and
+        chainid calldataload                        // [token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x00 byte                         // [memOffset, token_amount_in, pair_address, value, argoffset, argsize, retoffset, retsize]
+        mstore                                      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(memOffset, token_amount_in)
 
         // call input token transfer(to,value)
-        returndatasize                              // [retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
         0x44                                        // [argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
         0x16 calldataload 0x60 shr                  // [token_address, value, argoffset, argsize, retoffset, retsize, pair_address, value, argoffset, argsize, retoffset, retsize]
         gas
         call pop
@@ -558,6 +561,8 @@
         [TRANSFER_SIG] dup3 mstore
         dup7 0x2a add
         calldataload
+        0xffffffff00000000000000000000000000000000000000000000000000000000
+        and
         dup8 calldataload
         chainid byte
         mstore
@@ -608,8 +613,8 @@
         0x16 calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
-        0x15 calldataload returndatasize byte shr
-        returndatasize sub
+        0x15 calldataload 0x00 byte shr
+        0x00 sub
         0x44 mstore
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
@@ -622,10 +627,10 @@
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
         0x40                                        // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retoffset, retsize]
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
@@ -641,9 +646,9 @@
 
     v3_input1:
         // setup calldata for pool.swap(address(this), false, amountSpecified, maxSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG_32] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
-        // returndatasize 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
+        // 0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
         callvalue 0x20 shl          
         0x44 mstore                                    // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(68, callvalue * 100000)
         [MAX_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
@@ -657,23 +662,22 @@
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
         0x40                                        // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retoffset, retsize]
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         chainid calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         
-        returndatasize
+        0x00
         mload
-        returndatasize
-        sub
+        0x00 sub
         0x16 calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
         0x15 calldataload 
-        returndatasize byte shr
+        0x00 byte shr
         lt
         and
         exit jumpi
@@ -683,13 +687,13 @@
 
     v3_output0:
         // setup calldata for pool.swap(address(this), false, amountSpecified, maxSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG_32] returndatasize mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG_32] 0x00 mstore                   // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
         0x16 calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
-        0x15 calldataload returndatasize byte 
+        0x15 calldataload 0x00 byte 
         shr
         0x44 mstore      // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         [MAX_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
@@ -704,15 +708,15 @@
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
         0x40                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retoffset, retsize]
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
-        returndatasize mload
-        returndatasize sub
+        0x00 mload
+        0x01 sub
         callvalue 0x20 shl
         lt
         and
@@ -723,11 +727,11 @@
 
     v3_output1:
         // setup calldata for pool.swap(address(this), true, amountSpecified, minSqrtPriceLimitX96, data)
-        [V3_SWAP_SIG_32] returndatasize mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
+        [V3_SWAP_SIG_32] 0x00 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(0, 0x022c0d9f)
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         chainid 0x24 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
         callvalue 0x20 shl
-        returndatasize sub
+        0x00 sub
         0x44 mstore                                 // [amount_in_raw, pair_address, value, argoffset, argsize, retoffset, retsize]
         [MIN_SQRT_PRICE_LIMIT_X96] 0x64 mstore      // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(100, address(this))
         // data part used for callback
@@ -742,19 +746,19 @@
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
         0x40                                        // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retoffset, retsize]
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
-        returndatasize
+        0x00
         mload
         0x16 calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
-        0x15 calldataload returndatasize byte 
+        0x15 calldataload 0x00 byte 
         shr
         gt
         and
@@ -848,7 +852,7 @@
         call
 
         0x00 mload
-        returndatasize
+        0x01
         sub
         // extract amount out
         dup3 0x1b add calldataload
@@ -870,6 +874,7 @@
         [V3_SWAP_SIG_32] 0x00 mstore
         address 0x04 mstore
         0x00 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
+        // extract amount in
         dup1 0x1b add calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
@@ -898,7 +903,7 @@
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         0x00 mload
-        returndatasize
+        0x01
         sub
         dup3 0x16 add calldataload
         0xffffffff00000000000000000000000000000000000000000000000000000000
@@ -919,6 +924,7 @@
         [V3_SWAP_SIG_32] 0x00 mstore
         address 0x04 mstore
         chainid 0x24 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, true)
+        // extract amount out
         dup1 0x16 add calldataload
         0xffffffff00000000000000000000000000000000000000000000000000000000
         and
@@ -967,7 +973,7 @@
 
     prepare_stack:
         chainid
-        returndatasize
+        0x00
         calldataload
         chainid
         byte
@@ -1105,23 +1111,23 @@
     recover_weth:
         
         [WITHDRAW_SIG] callvalue add 
-        returndatasize mstore
+        0x00 mstore
 
         // make withdraw call
-        returndatasize                              // [retsize]
-        returndatasize                              // [retoffset, retsize]
+        0x00                              // [retsize]
+        0x00                              // [retoffset, retsize]
         0x24  // 36 (4 + 32)                        // [argsize, retoffset, retsize]
-        returndatasize                              // [argoffset, argsize, retoffset, retsize]
-        returndatasize                              // [value, argoffset, argsize, retoffset, retsize]
+        0x00                              // [argoffset, argsize, retoffset, retsize]
+        0x00                              // [value, argoffset, argsize, retoffset, retsize]
         [WETH]                                      // [weth_addr, value, argoffset, argsize, retoffset, retsize]
         gas                                         // [gas, weth_addr, value, argoffset, argsize, retoffset, retsize]
         call
 
         // transfer balance to searcher
-        returndatasize                                        // [retsize]
-        returndatasize                                        // [retoffset, retsize]
-        returndatasize                                        // [argsize, retoffset, retsize]
-        returndatasize                                        // [argoffset, argsize, retoffset, retsize]
+        0x00                                        // [retsize]
+        0x00                                        // [retoffset, retsize]
+        0x00                                        // [argsize, retoffset, retsize]
+        0x00                                        // [argoffset, argsize, retoffset, retsize]
         selfbalance                                 // [contract_value, argoffset, argsize, retoffset, retsize]
         caller                                      // [caller, contract_value, argoffset, argsize, retoffset, retsize]
         gas                                         // [gas, caller, contract_value, argoffset, argsize, retoffset, retsize]
@@ -1134,13 +1140,13 @@
         
     deposit_weth:
         // prepare variables for deposit call
-        [DEPOSIT_SIG] returndatasize mstore
+        [DEPOSIT_SIG] 0x00 mstore
 
         // make deposit call
-        returndatasize
-        returndatasize
+        0x00
+        0x00
         0x4
-        returndatasize
+        0x00
         callvalue
         [WETH]
         gas

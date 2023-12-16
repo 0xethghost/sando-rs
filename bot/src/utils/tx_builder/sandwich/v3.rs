@@ -194,9 +194,9 @@ impl SandwichLogicV3 {
             abi::Token::Uint(fee),
         ]));
         let encoded_amount_in_swap_value: EncodedSwapValue =
-            encode_num_bytes(U256::from(amount_in.as_u128()), 4);
+            encode_num_bytes(U256::from(amount_in.as_u128()), 5);
         let encoded_amount_out_swap_value: EncodedSwapValue =
-            encode_num_bytes(U256::from(amount_out.as_u128()), 5);
+            encode_num_bytes(U256::from(amount_out.as_u128()), 4);
 
         let prepare_stack_sig = get_prepare_stack_payload();
         let (payload_data, str_payload) = utils::encode_packed(&[
@@ -218,6 +218,7 @@ impl SandwichLogicV3 {
                 encoded_amount_in_swap_value.encoded_value,
                 utils::TakeLastXBytes(40),
             ),
+            utils::PackedToken::Address(input),
             utils::PackedToken::Bytes(&pool_key_hash),
         ]);
         let (payload, _) = if is_first {

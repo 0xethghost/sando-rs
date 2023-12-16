@@ -42,9 +42,6 @@ pub async fn create_optimal_sandwich(
     fork_factory: &mut ForkFactory,
     sandwich_maker: &SandwichMaker,
 ) -> Result<OptimalRecipe, SimulationError> {
-    // if multi_ingredients.len() <= 1 {
-    //     return Err(SimulationError::NotMultiMeat());
-    // }
     let mut optimals: Vec<U256> = vec![];
     let mut upper_bound = sandwich_balance;
 
@@ -447,6 +444,9 @@ fn sanity_check(
     }
     good_meats.sort_by(|a, b| a.hash.cmp(&b.hash));
     good_meats.dedup();
+    if good_meats.is_empty() {
+        return Err(SimulationError::NoMeat());
+    }
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    BACKRUN TRANSACTION                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -555,6 +555,11 @@ fn sanity_check(
     match backrun_result {
         ExecutionResult::Success { .. } => { /* continue */ }
         ExecutionResult::Revert { output, .. } => {
+            println!("{:02x?}", frontrun_data.encode_hex::<String>());
+            println!("{:?}", frontrun_value);
+            println!("{:?}", good_meats.iter().map(|x|x.hash).collect::<Vec<H256>>());
+            println!("{:02x?}", backrun_data.encode_hex::<String>());
+            println!("{:?}", backrun_value);
             return Err(SimulationError::BackrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => return Err(SimulationError::BackrunHalted(reason)),
