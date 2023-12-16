@@ -531,7 +531,7 @@ fn sanity_check(
     evm.env.tx.caller = searcher.0.into();
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
     evm.env.tx.data = backrun_data.clone().into();
-    evm.env.tx.gas_limit = 700000;
+    evm.env.tx.gas_limit = 700000 * ingredients_len;
     evm.env.tx.gas_price = next_block.base_fee.into();
     evm.env.tx.value = backrun_value.into();
 
