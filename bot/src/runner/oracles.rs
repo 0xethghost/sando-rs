@@ -41,13 +41,7 @@ pub fn start_block_oracle(
             while let Some(block) = block_stream.next().await {
                 //update searcher nonce
                 sandwich_maker.update_searcher_nonce().await;
-                // clear all recipes
-                // enchanement: don't do this step but keep recipes because they can be used in future
-                {
-                    let bundle_sender = bundle_sender.clone();
-                    let mut bundle_sender_guard = bundle_sender.write().await;
-                    bundle_sender_guard.pending_sandwiches.clear();
-                } // lock removed here
+
                 // lock the RwLock for write access and update the variable
                 {
                     let block = block.clone();
@@ -69,22 +63,29 @@ pub fn start_block_oracle(
                     );
                 } // remove write lock due to being out of scope here
 
-                // 10.5 seconds from when new block was detected, caluclate mega sandwich
-                tokio::time::sleep(Duration::from_millis(10_500)).await;
-                let block = block.clone();
-                let next_block_info = BlockInfo::find_next_block_info(block);
-                {
-                    let bundle_sender = bundle_sender.clone();
-                    bundle_sender
-                        .write()
-                        .await
-                        .make_mega_sandwich(
-                            next_block_info,
-                            sandwich_state.clone(),
-                            sandwich_maker.clone(),
-                        )
-                        .await;
-                } // lock removed here
+                // // 10.5 seconds from when new block was detected, caluclate mega sandwich
+                let sandwich_maker = sandwich_maker.clone();
+                let bundle_sender = bundle_sender.clone();
+                let sandwich_state = sandwich_state.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(10_500)).await;
+                    let next_block_info = BlockInfo::find_next_block_info(block);
+                    {
+                        let bundle_sender = bundle_sender.clone();
+                        bundle_sender
+                            .write()
+                            .await
+                            .make_mega_sandwich(next_block_info, sandwich_state, sandwich_maker)
+                            .await;
+                    } // lock removed here
+                      // clear all recipes
+                      // enchanement: don't do this step but keep recipes because they can be used in future
+                    {
+                        let bundle_sender = bundle_sender.clone();
+                        let mut bundle_sender_guard = bundle_sender.write().await;
+                        bundle_sender_guard.pending_sandwiches.clear();
+                    } // lock removed here
+                });
                 // {
                 //     let sandwich_balance = {
                 //         let read_lock = sandwich_state.weth_balance.read().await;
@@ -218,21 +219,26 @@ pub fn start_add_new_pools(all_pools: &mut Arc<DashMap<Address, Pool>>, dexes: V
 //                     let mut bundle_sender_guard = bundle_sender.write().await;
 //                     bundle_sender_guard.pending_sandwiches.clear();
 //                 } // lock removed here
-//                   // 10.5 seconds from when new block was detected, caluclate mega sandwich
-//                 tokio::time::sleep(Duration::from_millis(10_500)).await;
-//                 let next_block_info = BlockInfo::find_next_block_info(block);
-//                 {
-//                     let bundle_sender = bundle_sender.clone();
-//                     bundle_sender
-//                         .write()
-//                         .await
-//                         .make_mega_sandwich(
-//                             next_block_info,
-//                             sandwich_state.clone(),
-//                             sandwich_maker.clone(),
-//                         )
-//                         .await;
-//                 } // lock removed here
+//                 let sandwich_maker = sandwich_maker.clone();
+//                 let bundle_sender = bundle_sender.clone();
+//                 let sandwich_state = sandwich_state.clone();
+//                 tokio::spawn(async move {
+//                     tokio::time::sleep(Duration::from_millis(10_500)).await;
+//                     let next_block_info = BlockInfo::find_next_block_info(block);
+//                     {
+//                         let bundle_sender = bundle_sender.clone();
+//                         bundle_sender
+//                             .write()
+//                             .await
+//                             .make_mega_sandwich(
+//                                 next_block_info,
+//                                 sandwich_state,
+//                                 sandwich_maker,
+//                             )
+//                             .await;
+//                     } // lock removed here
+//                 });
+//                 // 10.5 seconds from when new block was detected, caluclate mega sandwich
 //             }
 //         }
 //     });

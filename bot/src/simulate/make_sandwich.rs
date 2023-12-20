@@ -260,6 +260,7 @@ fn sanity_check(
     let mut frontrun_value: U256 = U256::from(0);
     let ingredients_len: u64 = multi_ingredients.len() as u64;
     let is_multiple = ingredients_len > 1;
+    let mut backrun_ins: Vec<U256> = vec![];
 
     // prepare frontrun data and value
     for (index, ingredients) in multi_ingredients.iter_mut().enumerate() {
@@ -306,6 +307,7 @@ fn sanity_check(
                 tx_builder::v3::decode_intermediary(amount_out)
             }
         };
+        backrun_ins.push(frontrun_out);
         // create tx.data and tx.value for frontrun_in
         let (data, value) = match pool_variant {
             PoolVariant::UniswapV2 => {
@@ -457,13 +459,13 @@ fn sanity_check(
         // encode backrun_in before passing to sandwich contract
         let token_in = ingredients.intermediary_token;
         let token_out = ingredients.startend_token;
-        let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
+        // let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
         let pool_variant = ingredients.target_pool.pool_variant;
         let backrun_in = match pool_variant {
             PoolVariant::UniswapV2 => {
-                tx_builder::v2::encode_intermediary_token(balance, false, token_in)
+                tx_builder::v2::encode_intermediary_token(backrun_ins[index], false, token_in)
             }
-            PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
+            PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(backrun_ins[index]),
         };
         // caluclate backrun_out using encoded backrun_in
         let backrun_out = match pool_variant {
