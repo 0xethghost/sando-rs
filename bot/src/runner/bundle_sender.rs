@@ -327,10 +327,7 @@ pub async fn send_bundle(
 
     // send bundle to all relay endpoints (concurrently)
     for relay in relay::get_all_relay_endpoints().await {
-        // let sandwich_state = sandwich_state.clone();
-        // let sandwich_maker = sandwich_maker.clone();
         let bundle = bundle.clone();
-        // let recipe = recipe.clone();
 
         tokio::spawn(async move {
             match relay.flashbots_client.inner().send_bundle(&bundle).await {
@@ -345,61 +342,6 @@ pub async fn send_bundle(
                     }
                 }
             };
-
-            // let bundle_hash = pending_bundle.bundle_hash;
-
-            // let is_bundle_included = match pending_bundle.await {
-            //     Ok(_) => true,
-            //     Err(ethers_flashbots::PendingBundleError::BundleNotIncluded) => {
-            //         log::info!("{:?} Block passed without inclusion", recipe.print_meats());
-            //         false
-            //     }
-            //     Err(e) => {
-            //         log::error!(
-            //             "{:?} Bundle rejected due to error : {:?}",
-            //             recipe.print_meats(),
-            //             e
-            //         );
-            //         false
-            //     }
-            // };
-
-            // // only do this operation once (could do this in a cleaner way :<)
-            // if relay.relay_name == "flashbots" {
-            //     utils::alert::alert_bundle(
-            //         bundle_hash,
-            //         target_block.number,
-            //         is_bundle_included,
-            //         &recipe,
-            //         profit,
-            //     )
-            //     .await;
-
-            //     match (is_bundle_included, recipe.has_dust) {
-            //         (true, false) => {
-            //             let other_token =
-            //                 if recipe.target_pool.token_0 != utils::constants::get_weth_address() {
-            //                     recipe.target_pool.token_0
-            //                 } else {
-            //                     recipe.target_pool.token_1
-            //                 };
-
-            //             // sandwich_state.update_weth_balance(profit).await;
-            //             sandwich_state.add_dust(other_token).await;
-            //             let mut nonce = sandwich_maker.nonce.write().await;
-            //             *nonce += U256::from(2);
-            //             log::info!("Adding new dust: {:?}", other_token);
-            //         }
-            //         (true, _) => {
-            //             // update weth balance
-            //             // sandwich_state.update_weth_balance(profit).await;
-            //             let mut nonce = sandwich_maker.nonce.write().await;
-            //             *nonce += U256::from(2);
-            //             log::info!("Updating weth balance");
-            //         }
-            //         (false, _) => { /* bundle not included, do nothing */ }
-            //     }
-            // }
         });
     }
     Ok(())
@@ -431,7 +373,7 @@ fn calculate_bribe_for_max_fee(
     // more info: https://twitter.com/libevm/status/1474870661373779969
     for pool in recipe.target_pools.iter() {
         if !pool.has_dust {
-            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000 * 3 / 2;
+            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000;
         }
     }
     let mut rng = rand::thread_rng();
