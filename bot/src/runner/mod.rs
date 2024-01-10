@@ -90,12 +90,17 @@ impl Bot {
         log::info!("Starting bot");
 
         oracles::start_add_new_pools(&mut self.all_pools, self.dexes.clone());
-        oracles::start_block_oracle(&mut self.latest_block_oracle, self.sandwich_state.clone());
-        oracles::start_mega_sandwich_oracle(
+        oracles::start_block_oracle(
             self.bundle_sender.clone(),
+            &mut self.latest_block_oracle,
             self.sandwich_state.clone(),
-            self.sandwich_maker.clone(),
+            self.sandwich_maker.clone()
         );
+        // oracles::start_mega_sandwich_oracle(
+        //     self.bundle_sender.clone(),
+        //     self.sandwich_state.clone(),
+        //     self.sandwich_maker.clone(),
+        // );
 
         let mut mempool_stream = if let Ok(stream) =
             rpc_extensions::subscribe_pending_txs_with_body(&self.client).await
@@ -106,8 +111,6 @@ impl Bot {
         };
 
         while let Some(mut victim_tx) = mempool_stream.next().await {
-            // use std::time::Instant;
-            // let now = Instant::now();
             let client = match utils::create_websocket_client().await {
                 Ok(ws_client) => ws_client,
                 Err(_) => continue,
@@ -201,7 +204,6 @@ impl Bot {
                 let sandwichable_pool = sandwichable_pool.clone();
                 let mut fork_factory = fork_factory.clone();
                 let block_oracle = block_oracle.clone();
-                // let sandwich_state = self.sandwich_state.clone();
                 let sandwich_maker = self.sandwich_maker.clone();
                 let bundle_sender = self.bundle_sender.clone();
                 let state_diffs = state_diffs.clone();
@@ -210,7 +212,6 @@ impl Bot {
                     // enhancement: increase opportunities by handling swaps in pools with stables
                     let input_token = utils::constants::get_weth_address();
                     let victim_hash = victim_tx.hash;
-
                     // variables used when searching for opportunity
                     let raw_ingredients = if let Ok(data) = RawIngredients::new(
                         &sandwichable_pool.pool,
@@ -228,7 +229,7 @@ impl Bot {
 
                     // find optimal input to sandwich tx
                     let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-                        &vec![raw_ingredients],
+                        &mut vec![raw_ingredients],
                         sandwich_balance,
                         &block_oracle.next_block,
                         &mut fork_factory,
@@ -246,39 +247,19 @@ impl Bot {
                         }
                     };
 
-                    // // check if has dust
-                    // let other_token = if optimal_sandwich.target_pool.token_0
-                    //     != utils::constants::get_weth_address()
-                    // {
-                    //     optimal_sandwich.target_pool.token_0
-                    // } else {
-                    //     optimal_sandwich.target_pool.token_1
-                    // };
-
-                    // if sandwich_state.has_dust(&other_token).await {
-                    //     optimal_sandwich.has_dust = true;
-                    // }
-
                     // spawn thread to send tx to builders
                     let optimal_sandwich = optimal_sandwich.clone();
                     let optimal_sandwich_two = optimal_sandwich.clone();
                     // let sandwich_maker = sandwich_maker.clone();
-                    // let sandwich_state = sandwich_state.clone();
                     if optimal_sandwich.revenue > U256::zero() {
                         let bundle_sender = bundle_sender.clone();
+                        // tokio::spawn(async move {
                         bundle_sender
                             .write()
                             .await
-                            .add_recipe(optimal_sandwich_two)
+                            .add_recipe(optimal_sandwich_two, sandwichable_pool.pool)
                             .await;
-                        log::info!(
-                            "{}",
-                            format!(
-                                "{:?} added to bundle sender",
-                                optimal_sandwich.print_meats()
-                            )
-                            .bright_magenta()
-                        );
+                        // });
                         tokio::spawn(async move {
                             match bundle_sender::send_bundle(
                                 &optimal_sandwich,
@@ -288,15 +269,7 @@ impl Bot {
                             )
                             .await
                             {
-                                Ok(_) => {
-                                    /* all reporting already done inside of send_bundle */
-                                    // bundle_sender
-                                    //     .write()
-                                    //     .await
-                                    //     .add_recipe(optimal_sandwich_two)
-                                    //     .await;
-                                    
-                                }
+                                Ok(_) => { /* all reporting already done inside of send_bundle */ }
                                 Err(e) => {
                                     log::info!(
                                         "{}",
@@ -310,19 +283,6 @@ impl Bot {
                                 }
                             };
                         });
-                        // let bundle_sender = bundle_sender.clone();
-                        // tokio::spawn(async move {
-                        //     bundle_sender
-                        //         .write()
-                        //         .await
-                        //         .add_recipe(optimal_sandwich_two)
-                        //         .await;
-                        // });
-                        // let elpased = now.elapsed();
-                        // log::info!(
-                        //     "{}",
-                        //     format!("[{:?}] Time elapsed {:?}", &victim_hash, elpased)
-                        // );
                     }
                 });
             }

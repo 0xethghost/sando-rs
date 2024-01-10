@@ -56,7 +56,7 @@ pub enum SimulationError {
     EvmReverted(revm::primitives::Bytes),
     AbiError(AbiError),
     ZeroOptimal(),
-    NotMultiMeat(),
+    NoMeat(),
 }
 
 impl fmt::Display for SimulationError {
@@ -104,8 +104,8 @@ impl fmt::Display for SimulationError {
             SimulationError::ZeroOptimal() => {
                 write!(f, "No optimal sandwich found")
             }
-            SimulationError::NotMultiMeat() => {
-                write!(f, "Not multimeat sandwich")
+            SimulationError::NoMeat() => {
+                write!(f, "No meat to sandwich")
             }
         }
     }

@@ -45,6 +45,10 @@ pub fn get_end_of_multi_payload() -> u8 {
     37_u8
 }
 
+pub fn get_prepare_stack_payload() -> u8 {
+    94_u8
+}
+
 pub fn get_banner() -> &'static str {
     let banner = indoc! {
 r#"

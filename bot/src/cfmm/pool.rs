@@ -14,6 +14,7 @@ pub struct Pool {
     pub token_1: Address,
     pub swap_fee: U256,
     pub pool_variant: PoolVariant,
+    pub has_dust: bool
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,6 +37,7 @@ impl Pool {
         } else {
             (token_b, token_a)
         };
+        let has_dust = false;
 
         Pool {
             address,
@@ -43,6 +45,7 @@ impl Pool {
             token_1,
             swap_fee,
             pool_variant,
+            has_dust
         }
     }
 }

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use ethers::{prelude::*, types::transaction::eip2718::TypedTransaction};
 
-pub mod alert;
 pub mod constants;
 pub mod contracts;
+
 pub mod dotenv;
 pub mod encode_packed;
 pub mod state_diff;
@@ -68,11 +68,4 @@ pub async fn sign_eip1559(
 pub async fn create_websocket_client() -> eyre::Result<Arc<Provider<Ws>>> {
     let client = dotenv::get_ws_provider().await;
     Ok(Arc::new(client))
-}
-
-pub async fn get_nonce(
-    client: &Arc<Provider<Ws>>,
-    address: Address,
-) -> Result<U256, ProviderError> {
-    client.get_transaction_count(address, None).await
 }

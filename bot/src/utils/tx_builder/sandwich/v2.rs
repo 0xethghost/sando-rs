@@ -24,8 +24,8 @@ impl SandwichLogicV2 {
             "v2_output_multi_next",
         ];
 
-        let start_offset_single = 39;
-        let start_offset_multi = 74;
+        let start_offset_single = 48;
+        let start_offset_multi = 83;
 
         for x in 0..jump_label_names_single.len() {
             jump_labels.insert(
@@ -46,6 +46,7 @@ impl SandwichLogicV2 {
 
     pub fn create_payload_weth_is_input(
         &self,
+        block_number: U64,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
@@ -60,6 +61,7 @@ impl SandwichLogicV2 {
         let swap_type = self._find_swap_type(false, false, true, other_token);
 
         let (payload, _) = utils::encode_packed(&[
+            utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(
                 encoded_swap_value.mem_offset,
@@ -73,13 +75,12 @@ impl SandwichLogicV2 {
         ]);
 
         let encoded_call_value = amount_in.div(get_weth_encode_divisor());
-        // log::info!("{}", format!("[Frontrun payload] {:02x?}", payload));
-        // log::info!("{}", format!("[Frontrun value] {:?}", encoded_call_value));
         (payload, encoded_call_value)
     }
 
     pub fn create_payload_weth_is_output(
         &self,
+        block_number: U64,
         amount_in: U256,      // backrun_in
         amount_out: U256,     // backrun_out
         other_token: Address, // input_token
@@ -94,6 +95,7 @@ impl SandwichLogicV2 {
         let swap_type = self._find_swap_type(false, false, false, other_token);
 
         let (payload, _) = utils::encode_packed(&[
+            utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(
                 encoded_swap_value.mem_offset,
@@ -116,6 +118,7 @@ impl SandwichLogicV2 {
 
     pub fn create_multi_payload_weth_is_input(
         &self,
+        block_number: U64,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
@@ -134,6 +137,7 @@ impl SandwichLogicV2 {
         let (payload, _) = if is_first {
             callvalue = encoded_amount_in;
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     encoded_amount_out_swap_value.mem_offset,
@@ -147,6 +151,7 @@ impl SandwichLogicV2 {
             ])
         } else {
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     encoded_amount_out_swap_value.mem_offset,
@@ -166,6 +171,7 @@ impl SandwichLogicV2 {
 
     pub fn create_multi_payload_weth_is_output(
         &self,
+        block_number: U64,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
@@ -187,6 +193,7 @@ impl SandwichLogicV2 {
         let (payload, _) = if is_first {
             callvalue = encoded_amount_out_swap_value.encoded_value;
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     encoded_amount_in_swap_value.mem_offset,
@@ -205,6 +212,7 @@ impl SandwichLogicV2 {
             ])
         } else {
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     encoded_amount_in_swap_value.mem_offset,

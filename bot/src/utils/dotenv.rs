@@ -47,9 +47,9 @@ pub fn read_env_vars() -> Vec<(String, String)> {
         "SEARCHER_PRIVATE_KEY",
         "FLASHBOTS_AUTH_KEY",
         "SANDWICH_CONTRACT",
-        "V2_ALERT_DISCORD_WEBHOOK",
-        "V3_ALERT_DISCORD_WEBHOOK",
-        "POISON_ALERT_DISCORD_WEBHOOK",
+        // "V2_ALERT_DISCORD_WEBHOOK",
+        // "V3_ALERT_DISCORD_WEBHOOK",
+        // "POISON_ALERT_DISCORD_WEBHOOK",
         "SANDWICH_INCEPTION_BLOCK",
     ];
     for key in keys {
@@ -71,23 +71,23 @@ pub async fn get_ws_provider() -> Provider<Ws> {
         .expect("RPC Connection Error")
 }
 
-/// Return a webhook for v2 discord alert channel
-pub fn get_v2_alert_webhook() -> String {
-    dotenv::var("V2_ALERT_DISCORD_WEBHOOK")
-        .expect("Required environment variable \"V2_ALERT_DISCORD_WEBHOOK\" not set")
-}
+// /// Return a webhook for v2 discord alert channel
+// pub fn get_v2_alert_webhook() -> String {
+//     dotenv::var("V2_ALERT_DISCORD_WEBHOOK")
+//         .expect("Required environment variable \"V2_ALERT_DISCORD_WEBHOOK\" not set")
+// }
 
-/// Return a webhook for v3 discord alert channel
-pub fn get_v3_alert_webhook() -> String {
-    dotenv::var("V3_ALERT_DISCORD_WEBHOOK")
-        .expect("Required environment variable \"V3_ALERT_DISCORD_WEBHOOK\" not set")
-}
+// /// Return a webhook for v3 discord alert channel
+// pub fn get_v3_alert_webhook() -> String {
+//     dotenv::var("V3_ALERT_DISCORD_WEBHOOK")
+//         .expect("Required environment variable \"V3_ALERT_DISCORD_WEBHOOK\" not set")
+// }
 
-/// Return a webhook for poison discord alert channel
-pub fn poison_alert_webhook() -> String {
-    dotenv::var("POISON_ALERT_DISCORD_WEBHOOK")
-        .expect("Required environment variable \"POISON_ALERT_DISCORD_WEBHOOK\" not set")
-}
+// /// Return a webhook for poison discord alert channel
+// pub fn poison_alert_webhook() -> String {
+//     dotenv::var("POISON_ALERT_DISCORD_WEBHOOK")
+//         .expect("Required environment variable \"POISON_ALERT_DISCORD_WEBHOOK\" not set")
+// }
 
 /// Return a interval block for update new pools info
 pub fn get_interval_block_new_pool() -> u64 {

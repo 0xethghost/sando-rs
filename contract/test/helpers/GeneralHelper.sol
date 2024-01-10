@@ -9,9 +9,10 @@ import "v3-core/interfaces/IUniswapV3Pool.sol";
 import "forge-std/console.sol";
 
 library GeneralHelper {
-    function getAmountOut(
+    function getAmountOutV2(
         address inputToken,
         address outputToken,
+        address factory,
         uint amountIn
     ) public view returns (uint amountOut) {
         // Declare uniswapv2 types
@@ -20,7 +21,7 @@ library GeneralHelper {
         );
 
         (uint reserveToken0, uint reserveToken1, ) = IUniswapV2Pair(
-            getUniswapPair(inputToken, outputToken)
+            getV2Pair(inputToken, outputToken, factory)
         ).getReserves();
 
         uint reserveIn;
@@ -36,16 +37,14 @@ library GeneralHelper {
             reserveOut = reserveToken0;
         }
 
-        //console.log("reserveIn", reserveIn);
-        //console.log("reserveOut", reserveOut);
-
         // Get amounts out
         amountOut = univ2Router.getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
-    function getAmountIn(
+    function getAmountInV2(
         address inputToken,
         address outputToken,
+        address factory,
         uint amountOut
     ) public view returns (uint amountIn) {
         // Declare uniswapv2 types
@@ -54,7 +53,7 @@ library GeneralHelper {
         );
 
         (uint reserveToken0, uint reserveToken1, ) = IUniswapV2Pair(
-            getUniswapPair(inputToken, outputToken)
+            getV2Pair(inputToken, outputToken, factory)
         ).getReserves();
 
         uint reserveIn;
@@ -69,9 +68,6 @@ library GeneralHelper {
             reserveIn = reserveToken1;
             reserveOut = reserveToken0;
         }
-
-        //console.log("reserveIn", reserveIn);
-        //console.log("reserveOut", reserveOut);
 
         // Get amounts out
         amountIn = univ2Router.getAmountIn(amountOut, reserveIn, reserveOut);
@@ -114,15 +110,10 @@ library GeneralHelper {
         address tokenA,
         address tokenB
     ) public view returns (address pair) {
-        // Declare uniswapv2 types
-        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
+        pair = getV2Pair(
+            tokenA,
+            tokenB,
             0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
-        );
-
-        pair = address(
-            IUniswapV2Pair(
-                univ2Factory.getPair(address(tokenA), address(tokenB))
-            )
         );
     }
 
@@ -130,10 +121,20 @@ library GeneralHelper {
         address tokenA,
         address tokenB
     ) public view returns (address pair) {
-        // Declare uniswapv2 types
-        IUniswapV2Factory univ2Factory = IUniswapV2Factory(
+        pair = getV2Pair(
+            tokenA,
+            tokenB,
             0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac
         );
+    }
+
+    function getV2Pair(
+        address tokenA,
+        address tokenB,
+        address factory
+    ) public view returns (address pair) {
+        // Declare uniswapv2 types
+        IUniswapV2Factory univ2Factory = IUniswapV2Factory(factory);
 
         pair = address(
             IUniswapV2Pair(

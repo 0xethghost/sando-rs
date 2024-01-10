@@ -16,6 +16,7 @@ use crate::types::{BlockInfo, SimulationError};
 use crate::utils::constants::{get_end_of_multi_payload, get_weth_address};
 use crate::utils::dotenv;
 use crate::utils::tx_builder::{self, braindance, SandwichMaker};
+use hex::ToHex;
 
 use super::{
     attach_braindance_module, braindance_address, braindance_controller_address,
@@ -35,15 +36,12 @@ use super::{
 // Ok(OptimalRecipe) if no errors during calculation
 // Err(SimulationError) if error during calculation
 pub async fn create_optimal_sandwich(
-    multi_ingredients: &[RawIngredients],
+    multi_ingredients: &mut [RawIngredients],
     sandwich_balance: U256,
     next_block: &BlockInfo,
     fork_factory: &mut ForkFactory,
     sandwich_maker: &SandwichMaker,
 ) -> Result<OptimalRecipe, SimulationError> {
-    // if multi_ingredients.len() <= 1 {
-    //     return Err(SimulationError::NotMultiMeat());
-    // }
     let mut optimals: Vec<U256> = vec![];
     let mut upper_bound = sandwich_balance;
 
@@ -53,6 +51,7 @@ pub async fn create_optimal_sandwich(
         // can also inject new sandwich code for testing
         crate::prelude::inject_sando(fork_factory, upper_bound);
     }
+    let mut good_ingredients: Vec<RawIngredients> = vec![];
     for ingredients in multi_ingredients.iter() {
         let optimal = juiced_quadratic_search(
             ingredients,
@@ -63,20 +62,24 @@ pub async fn create_optimal_sandwich(
         )
         .await?;
         if optimal.is_zero() {
-            return Err(SimulationError::ZeroOptimal());
-            // continue;
+            continue;
         }
         upper_bound = match upper_bound.checked_sub(optimal) {
             Some(amount) => amount,
             None => U256::zero(),
         };
+        good_ingredients.push(ingredients.to_owned());
         optimals.push(optimal);
+    }
+
+    if good_ingredients.is_empty() {
+        return Err(SimulationError::ZeroOptimal());
     }
 
     sanity_check(
         sandwich_balance,
         optimals,
-        multi_ingredients,
+        &mut good_ingredients,
         next_block,
         sandwich_maker,
         fork_factory.new_sandbox_fork(),
@@ -198,7 +201,9 @@ async fn juiced_quadratic_search(
                 return Ok(U256::zero());
             }
             // no revenue found, most likely small optimal so decrease range
-            upper_bound = intervals[intervals.len() / 3].checked_sub(U256::from(1)).unwrap_or_default();
+            upper_bound = intervals[intervals.len() / 3]
+                .checked_sub(U256::from(1))
+                .unwrap_or_default();
             continue;
         }
 
@@ -238,7 +243,7 @@ async fn juiced_quadratic_search(
 fn sanity_check(
     sandwich_start_balance: U256,
     frontrun_ins: Vec<U256>,
-    multi_ingredients: &[RawIngredients],
+    multi_ingredients: &mut [RawIngredients],
     next_block: &BlockInfo,
     sandwich_maker: &SandwichMaker,
     fork_db: ForkDB,
@@ -253,9 +258,13 @@ fn sanity_check(
     let end_of_multi_payload = get_end_of_multi_payload();
     let mut frontrun_data: Vec<u8> = Vec::new();
     let mut frontrun_value: U256 = U256::from(0);
-    let is_multiple = multi_ingredients.len() > 1;
+    let ingredients_len: u64 = multi_ingredients.len() as u64;
+    let is_multiple = ingredients_len > 1;
+    let mut backrun_ins: Vec<U256> = vec![];
+    let block_number = next_block.number;
+
     // prepare frontrun data and value
-    for (index, ingredients) in multi_ingredients.iter().enumerate() {
+    for (index, ingredients) in multi_ingredients.iter_mut().enumerate() {
         let is_first = index == 0;
         let pool_variant = ingredients.target_pool.pool_variant;
 
@@ -279,6 +288,12 @@ fn sanity_check(
 
         let token_in = ingredients.startend_token;
         let token_out = ingredients.intermediary_token;
+        // set token has dust in pools
+        let token_out_balance =
+            get_balance_of_evm(token_out, sandwich_contract, next_block, &mut evm)?;
+        if token_out_balance > U256::zero() {
+            ingredients.target_pool.has_dust = true;
+        }
         let frontrun_out = match pool_variant {
             PoolVariant::UniswapV2 => {
                 let target_pool = ingredients.target_pool.address;
@@ -293,11 +308,13 @@ fn sanity_check(
                 tx_builder::v3::decode_intermediary(amount_out)
             }
         };
+        backrun_ins.push(frontrun_out);
         // create tx.data and tx.value for frontrun_in
         let (data, value) = match pool_variant {
             PoolVariant::UniswapV2 => {
                 if is_multiple {
                     sandwich_maker.v2.create_multi_payload_weth_is_input(
+                        block_number,
                         frontrun_in,
                         frontrun_out,
                         ingredients.intermediary_token,
@@ -306,6 +323,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v2.create_payload_weth_is_input(
+                        block_number,
                         frontrun_in,
                         frontrun_out,
                         ingredients.intermediary_token,
@@ -316,6 +334,7 @@ fn sanity_check(
             PoolVariant::UniswapV3 => {
                 if is_multiple {
                     sandwich_maker.v3.create_multi_payload_weth_is_input(
+                        block_number,
                         frontrun_in.as_u128().into(),
                         frontrun_out.as_u128().into(),
                         ingredients.startend_token,
@@ -325,6 +344,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v3.create_payload_weth_is_input(
+                        block_number,
                         frontrun_in.as_u128().into(),
                         frontrun_out.as_u128().into(),
                         ingredients.startend_token,
@@ -345,7 +365,7 @@ fn sanity_check(
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
     evm.env.tx.data = frontrun_data.clone().into();
     evm.env.tx.value = frontrun_value.into();
-    evm.env.tx.gas_limit = 700000;
+    evm.env.tx.gas_limit = 700000 * ingredients_len;
     evm.env.tx.gas_price = next_block.base_fee.into();
     evm.env.tx.access_list = Vec::default();
     // evm.env.tx.chain_id = Some(1_u64);
@@ -368,6 +388,9 @@ fn sanity_check(
     match frontrun_result {
         ExecutionResult::Success { .. } => { /* continue operation */ }
         ExecutionResult::Revert { output, .. } => {
+            println!("{:02x?}", frontrun_data.encode_hex::<String>());
+            println!("{:?}", frontrun_value);
+            println!("{:?}", frontrun_ins);
             return Err(SimulationError::FrontrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => {
@@ -426,6 +449,11 @@ fn sanity_check(
             }
         }
     }
+    good_meats.sort_by(|a, b| a.hash.cmp(&b.hash));
+    good_meats.dedup();
+    if good_meats.is_empty() {
+        return Err(SimulationError::NoMeat());
+    }
     // *´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     // *                    BACKRUN TRANSACTION                     */
     // *.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -436,13 +464,13 @@ fn sanity_check(
         // encode backrun_in before passing to sandwich contract
         let token_in = ingredients.intermediary_token;
         let token_out = ingredients.startend_token;
-        let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
+        // let balance = get_balance_of_evm(token_in, sandwich_contract, next_block, &mut evm)?;
         let pool_variant = ingredients.target_pool.pool_variant;
         let backrun_in = match pool_variant {
             PoolVariant::UniswapV2 => {
-                    tx_builder::v2::encode_intermediary_token(balance, false, token_in)
+                tx_builder::v2::encode_intermediary_token(backrun_ins[index], false, token_in)
             }
-            PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(balance),
+            PoolVariant::UniswapV3 => tx_builder::v3::encode_intermediary_token(backrun_ins[index]),
         };
         // caluclate backrun_out using encoded backrun_in
         let backrun_out = match pool_variant {
@@ -464,6 +492,7 @@ fn sanity_check(
             PoolVariant::UniswapV2 => {
                 if is_multiple {
                     sandwich_maker.v2.create_multi_payload_weth_is_output(
+                        block_number,
                         backrun_in,
                         backrun_out,
                         ingredients.intermediary_token,
@@ -472,6 +501,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v2.create_payload_weth_is_output(
+                        block_number,
                         backrun_in,
                         backrun_out,
                         ingredients.intermediary_token,
@@ -482,6 +512,7 @@ fn sanity_check(
             PoolVariant::UniswapV3 => {
                 if is_multiple {
                     sandwich_maker.v3.create_multi_payload_weth_is_output(
+                        block_number,
                         backrun_in.as_u128().into(),
                         backrun_out.as_u128().into(),
                         ingredients.intermediary_token,
@@ -491,6 +522,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v3.create_payload_weth_is_output(
+                        block_number,
                         backrun_in.as_u128().into(),
                         backrun_out.as_u128().into(),
                         ingredients.intermediary_token,
@@ -510,7 +542,7 @@ fn sanity_check(
     evm.env.tx.caller = searcher.0.into();
     evm.env.tx.transact_to = TransactTo::Call(sandwich_contract.0.into());
     evm.env.tx.data = backrun_data.clone().into();
-    evm.env.tx.gas_limit = 700000;
+    evm.env.tx.gas_limit = 700000 * ingredients_len;
     evm.env.tx.gas_price = next_block.base_fee.into();
     evm.env.tx.value = backrun_value.into();
 
@@ -534,6 +566,11 @@ fn sanity_check(
     match backrun_result {
         ExecutionResult::Success { .. } => { /* continue */ }
         ExecutionResult::Revert { output, .. } => {
+            println!("{:02x?}", frontrun_data.encode_hex::<String>());
+            println!("{:?}", frontrun_value);
+            println!("{:?}", good_meats.iter().map(|x|x.hash).collect::<Vec<H256>>());
+            println!("{:02x?}", backrun_data.encode_hex::<String>());
+            println!("{:?}", backrun_value);
             return Err(SimulationError::BackrunReverted(output));
         }
         ExecutionResult::Halt { reason, .. } => return Err(SimulationError::BackrunHalted(reason)),
@@ -577,6 +614,8 @@ fn sanity_check(
     //     .map(|(s, _)| s.to_owned())
     //     .collect();
 
+    let target_pools = multi_ingredients.iter().map(|x| x.target_pool).collect();
+
     Ok(OptimalRecipe::new(
         frontrun_data.into(),
         frontrun_value,
@@ -588,7 +627,7 @@ fn sanity_check(
         convert_access_list(backrun_access_list),
         good_meats,
         revenue,
-        multi_ingredients[0].target_pool,
+        target_pools,
         combined_state_diffs.clone(),
     ))
 }
@@ -814,13 +853,13 @@ mod test {
             .unwrap()
     }
 
-    async fn create_test(fork_block_num: u64, multi_ingredients: &[RawIngredients]) {
+    async fn create_test(fork_block_num: u64, multi_ingredients: &mut [RawIngredients]) {
         let start = Instant::now();
         let ws_provider = testhelper::create_ws().await;
         let combined_state_diffs = {
             let mut combined: BTreeMap<H160, AccountDiff> = BTreeMap::new();
 
-            for ingredients in multi_ingredients {
+            for ingredients in multi_ingredients.iter() {
                 for (key, value) in ingredients.state_diffs.clone() {
                     combined.insert(key, value);
                 }
@@ -879,7 +918,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -897,7 +936,7 @@ mod test {
                 false,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -916,7 +955,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -941,7 +980,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients_1, ingredients_2]).await;
+            create_test(fork_block_num, &mut vec![ingredients_1, ingredients_2]).await;
         });
     }
 
@@ -960,7 +999,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -978,7 +1017,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -1001,7 +1040,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 
@@ -1019,7 +1058,7 @@ mod test {
                 true,
             )
             .await;
-            create_test(fork_block_num, &vec![ingredients]).await;
+            create_test(fork_block_num, &mut vec![ingredients]).await;
         });
     }
 }

@@ -41,13 +41,12 @@ impl BundleSender {
     // * `recipe`: an `OptimalRecipe` instance representing the recipe to add
     //
     // Returns: This function returns nothing
-    pub async fn add_recipe(&mut self, recipe: OptimalRecipe) {
-        let target_pool = recipe.target_pool;
-        if let Some(sandwich_vec) = self.pending_sandwiches.get(&target_pool) {
+    pub async fn add_recipe(&mut self, recipe: OptimalRecipe, pool: Pool) {
+        if let Some(sandwich_vec) = self.pending_sandwiches.get(&pool) {
             sandwich_vec.write().await.push(recipe);
         } else {
             let new_vector = Arc::new(RwLock::new(vec![recipe]));
-            self.pending_sandwiches.insert(target_pool, new_vector);
+            self.pending_sandwiches.insert(pool, new_vector);
         }
     }
 
@@ -60,6 +59,7 @@ impl BundleSender {
         sandwich_state: Arc<BotState>,
         sandwich_maker: Arc<SandwichMaker>,
     ) {
+        log::info!("Making mega sandwich for {}", &next_block.number);
         let mut multi_ingredients: Vec<RawIngredients> = Vec::<RawIngredients>::new();
         let mut multi_combined_state_diffs: BTreeMap<H160, AccountDiff> = BTreeMap::new();
         for (target_pool, recipes) in self.pending_sandwiches.iter() {
@@ -93,7 +93,7 @@ impl BundleSender {
             };
 
             // create raw ingredients
-            let meats = recipes
+            let meats: Vec<Transaction> = recipes
                 .iter()
                 .flat_map(|recipe| recipe.meats.clone())
                 .collect();
@@ -132,7 +132,7 @@ impl BundleSender {
             (*read_lock).clone()
         };
         let optimal_sandwich = match make_sandwich::create_optimal_sandwich(
-            &multi_ingredients,
+            &mut multi_ingredients,
             weth_balance,
             &next_block,
             &mut fork_factory,
@@ -141,16 +141,23 @@ impl BundleSender {
         .await
         {
             Ok(optimal) => optimal,
-            Err(_) => {
+            Err(e) => {
+                log::info!(
+                    "End of making mega sandwich for {} due to create optimal sandwich error {}",
+                    &next_block.number,
+                    e
+                );
+
                 return;
             }
         };
         // optimal_sandwich.set_has_dust(has_dust);
 
         // if revenue is non zero send multi-meat sandwich to relays
-        // // could cleanup this code because a lot of copy + pasting from runner/mod.rs
+        // could cleanup this code because a lot of copy + pasting from runner/mod.rs
+        let next_block_two = next_block.clone();
         // tokio::spawn(async move {
-        if optimal_sandwich.revenue != U256::zero() {
+        if optimal_sandwich.revenue > U256::zero() {
             match send_bundle(
                 &optimal_sandwich,
                 next_block,
@@ -174,6 +181,7 @@ impl BundleSender {
             };
         }
         // });
+        log::info!("End of making mega sandwich for {}", &next_block_two.number);
     }
 }
 
@@ -262,7 +270,7 @@ pub async fn send_bundle(
         "{}",
         format!("{:?} nonce {:?} ", recipe.print_meats(), nonce)
             .blue()
-            .on_yellow()
+            .on_bright_magenta()
     );
     log::info!(
         "{}",
@@ -272,8 +280,7 @@ pub async fn send_bundle(
             format_units(recipe.revenue, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -283,8 +290,7 @@ pub async fn send_bundle(
             format_units(cost, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -294,8 +300,7 @@ pub async fn send_bundle(
             format_units(frontrun_transaction_fee, "ether").unwrap()
         )
         .bold()
-        .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -306,7 +311,7 @@ pub async fn send_bundle(
         )
         .bold()
         .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
     log::info!(
         "{}",
@@ -317,15 +322,12 @@ pub async fn send_bundle(
         )
         .bold()
         .yellow()
-        .on_bright_blue()
+        .on_bright_green()
     );
 
     // send bundle to all relay endpoints (concurrently)
     for relay in relay::get_all_relay_endpoints().await {
-        // let sandwich_state = sandwich_state.clone();
-        // let sandwich_maker = sandwich_maker.clone();
         let bundle = bundle.clone();
-        // let recipe = recipe.clone();
 
         tokio::spawn(async move {
             match relay.flashbots_client.inner().send_bundle(&bundle).await {
@@ -340,61 +342,6 @@ pub async fn send_bundle(
                     }
                 }
             };
-
-            // let bundle_hash = pending_bundle.bundle_hash;
-
-            // let is_bundle_included = match pending_bundle.await {
-            //     Ok(_) => true,
-            //     Err(ethers_flashbots::PendingBundleError::BundleNotIncluded) => {
-            //         log::info!("{:?} Block passed without inclusion", recipe.print_meats());
-            //         false
-            //     }
-            //     Err(e) => {
-            //         log::error!(
-            //             "{:?} Bundle rejected due to error : {:?}",
-            //             recipe.print_meats(),
-            //             e
-            //         );
-            //         false
-            //     }
-            // };
-
-            // // only do this operation once (could do this in a cleaner way :<)
-            // if relay.relay_name == "flashbots" {
-            //     utils::alert::alert_bundle(
-            //         bundle_hash,
-            //         target_block.number,
-            //         is_bundle_included,
-            //         &recipe,
-            //         profit,
-            //     )
-            //     .await;
-
-            //     match (is_bundle_included, recipe.has_dust) {
-            //         (true, false) => {
-            //             let other_token =
-            //                 if recipe.target_pool.token_0 != utils::constants::get_weth_address() {
-            //                     recipe.target_pool.token_0
-            //                 } else {
-            //                     recipe.target_pool.token_1
-            //                 };
-
-            //             // sandwich_state.update_weth_balance(profit).await;
-            //             sandwich_state.add_dust(other_token).await;
-            //             let mut nonce = sandwich_maker.nonce.write().await;
-            //             *nonce += U256::from(2);
-            //             log::info!("Adding new dust: {:?}", other_token);
-            //         }
-            //         (true, _) => {
-            //             // update weth balance
-            //             // sandwich_state.update_weth_balance(profit).await;
-            //             let mut nonce = sandwich_maker.nonce.write().await;
-            //             *nonce += U256::from(2);
-            //             log::info!("Updating weth balance");
-            //         }
-            //         (false, _) => { /* bundle not included, do nothing */ }
-            //     }
-            // }
         });
     }
     Ok(())
@@ -414,7 +361,7 @@ fn calculate_bribe_for_max_fee(
     target_block: &BlockInfo,
 ) -> Result<U256, SendBundleError> {
     // frontrun txfee is fixed, exclude it from bribe calculations
-    let revenue_minus_frontrun_tx_fee = match recipe
+    let mut revenue_minus_frontrun_tx_fee = match recipe
         .revenue
         .checked_sub(U256::from(recipe.frontrun_gas_used) * target_block.base_fee)
     {
@@ -424,6 +371,11 @@ fn calculate_bribe_for_max_fee(
 
     // overpay to get dust onto sandwich contractIf
     // more info: https://twitter.com/libevm/status/1474870661373779969
+    for pool in recipe.target_pools.iter() {
+        if !pool.has_dust {
+            revenue_minus_frontrun_tx_fee += target_block.base_fee * 11000;
+        }
+    }
     let mut rng = rand::thread_rng();
 
     // enchanement: make bribe adaptive based on competitors
@@ -451,7 +403,7 @@ fn calculate_bribe_for_max_fee(
             format_units(max_fee, "gwei").unwrap()
         )
         .yellow()
-        .on_blue()
+        .on_green()
     );
     log::info!(
         "{}",
@@ -461,7 +413,7 @@ fn calculate_bribe_for_max_fee(
             format_units(effective_miner_tip.unwrap(), "gwei").unwrap()
         )
         .yellow()
-        .on_blue()
+        .on_green()
     );
 
     Ok(max_fee)

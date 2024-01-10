@@ -17,7 +17,6 @@ contract Seppuku is Script {
         bytes memory payload = abi.encodePacked(seppukuLabel);
         uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
         vm.broadcast(searcherPrivateKey);
-        // vm.broadcast(0x501E809C8C8d268E136B6975b331EA398e07d35e);
         (bool result,) = sandwich.call(payload);
         require(result, "Call reverted");
     }
@@ -32,7 +31,7 @@ contract Seppuku is Script {
     function setupSigJumpLabelMapping() private {
         uint256 startingIndex = 0x27;
 
-        string[19] memory functionNames = [
+        string[22] memory functionNames = [
             "v2_input_single",
             "v2_output0_single",
             "v2_output1_single",
@@ -44,11 +43,14 @@ contract Seppuku is Script {
             "v2_input_multi_next",
             "v2_output_multi_first",
             "v2_output_multi_next",
-            "v3_multi_pre",
+            "prepare_stack",
             "v3_input0_multi",
             "v3_input1_multi",
             "v3_output0_multi",
             "v3_output1_multi",
+            "arbitrage_weth_input",
+            "arbitrage_v2_swap_to_other",
+            "arbitrage_v2_swap_to_this",
             "seppuku",
             "recoverWeth",
             "depositWeth"
