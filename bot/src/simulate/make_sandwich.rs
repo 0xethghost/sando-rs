@@ -261,7 +261,7 @@ fn sanity_check(
     let ingredients_len: u64 = multi_ingredients.len() as u64;
     let is_multiple = ingredients_len > 1;
     let mut backrun_ins: Vec<U256> = vec![];
-    let block_number = next_block.number;
+    let block_number = U256::from(next_block.number.as_u64());
 
     // prepare frontrun data and value
     for (index, ingredients) in multi_ingredients.iter_mut().enumerate() {

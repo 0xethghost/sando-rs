@@ -46,7 +46,7 @@ impl SandwichLogicV3 {
     // Handles creation of tx data field when weth is input
     pub fn create_payload_weth_is_input(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -86,7 +86,7 @@ impl SandwichLogicV3 {
     // Handles creation of tx data field when weth is output
     pub fn create_payload_weth_is_output(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -125,7 +125,7 @@ impl SandwichLogicV3 {
 
     pub fn create_multi_payload_weth_is_input(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -146,7 +146,7 @@ impl SandwichLogicV3 {
             encode_num_bytes(U256::from(amount_out.as_u128()), 5);
 
         let prepare_stack_sig = get_prepare_stack_payload();
-        let (payload_data, str_payload) = utils::encode_packed(&[
+        let (payload_data, _) = utils::encode_packed(&[
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
             utils::PackedToken::NumberWithShift(
@@ -189,7 +189,7 @@ impl SandwichLogicV3 {
     }
     pub fn create_multi_payload_weth_is_output(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -210,7 +210,7 @@ impl SandwichLogicV3 {
             encode_num_bytes(U256::from(amount_out.as_u128()), 4);
 
         let prepare_stack_sig = get_prepare_stack_payload();
-        let (payload_data, str_payload) = utils::encode_packed(&[
+        let (payload_data, _) = utils::encode_packed(&[
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
             utils::PackedToken::NumberWithShift(
