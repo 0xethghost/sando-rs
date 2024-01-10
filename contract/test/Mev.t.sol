@@ -77,13 +77,15 @@ contract SandwichTest is Test {
             4
         );
 
-        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
-        emit log_bytes(payloadV4);
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
+        emit log_bytes(payload);
         emit log_uint(encodedValue);
         vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         uint checkpointGasLeft1 = gasleft();
         console.log(
             "testV2WethInput0 gas used:",
@@ -131,12 +133,14 @@ contract SandwichTest is Test {
             4
         );
 
-        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsInput(outputToken, amountIn);
-        emit log_bytes(payloadV4);
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
+        emit log_bytes(payload);
         vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         uint checkpointGasLeft1 = gasleft();
         console.log(
             "testV2WethInput1 gas used:",
@@ -190,16 +194,18 @@ contract SandwichTest is Test {
             mevHelper.wethEncodeMultiple()) * mevHelper.wethEncodeMultiple();
 
         // Perform swap
-        (bytes memory payloadV4, uint256 encodedValue) = mevHelper
+        (bytes memory payload, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsOutput(
                 inputToken,
                 superFarmBalanceBefore
             );
-        emit log_bytes(payloadV4);
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
+        emit log_bytes(payload);
         emit log_uint(encodedValue);
         vm.startPrank(searcher);
         uint checkpointGasLeft = gasleft();
-        (bool s, ) = address(sandwich).call{value: encodedValue}(payloadV4);
+        (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
         uint checkpointGasLeft1 = gasleft();
         console.log(
             "testV2WethOutput0 gas used:",
@@ -257,6 +263,8 @@ contract SandwichTest is Test {
         // Perform swap
         (bytes memory payload, uint256 encodedValue) = mevHelper
             .v2CreateSandwichPayloadWethIsOutput(inputToken, daiBalanceBefore);
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
         emit log_bytes(payload);
         emit log_uint(encodedValue);
         emit log_uint(amountOutFromEncoded);
@@ -318,8 +326,9 @@ contract SandwichTest is Test {
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 end = 37;
-        payload = abi.encodePacked(payload, end);
+        uint8 end = 0x2e;
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -359,7 +368,7 @@ contract SandwichTest is Test {
             payload = abi.encodePacked(payload, subPayload);
         }
         emit log_uint(callvalue);
-        uint8 end = 37;
+        uint8 end = 0x2e;
         uint8 head = uint8(block.number);
         payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
@@ -411,7 +420,7 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
-        
+
         uint8 head = uint8(block.number);
         payload = abi.encodePacked(head, payload);
 
@@ -597,8 +606,9 @@ contract SandwichTest is Test {
                 );
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 end = 37;
-        payload = abi.encodePacked(payload, end);
+        uint8 end = 0x2e;
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
@@ -653,8 +663,9 @@ contract SandwichTest is Test {
                 );
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 end = 37;
-        payload = abi.encodePacked(payload, end);
+        uint8 end = 0x2e;
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
@@ -733,8 +744,9 @@ contract SandwichTest is Test {
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 end = 37;
-        payload = abi.encodePacked(payload, end);
+        uint8 end = 0x2e;
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -826,8 +838,9 @@ contract SandwichTest is Test {
         }
 
         emit log_uint(callvalue);
-        uint8 end = 37;
-        payload = abi.encodePacked(payload, end);
+        uint8 head = uint8(block.number);
+        uint8 end = 0x2e;
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -865,40 +878,105 @@ contract SandwichTest is Test {
         (bool s, ) = address(sandwich).call{value: callvalue}(frontrun_data);
         assertTrue(s, "calling custom frontrun data multimeat swap failed");
 
-        vm.startPrank(0x275A8D31bc87D5664249Db312001310a058B800e, 0x275A8D31bc87D5664249Db312001310a058B800e);
+        vm.startPrank(
+            0x275A8D31bc87D5664249Db312001310a058B800e,
+            0x275A8D31bc87D5664249Db312001310a058B800e
+        );
         address to = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
-        bytes memory meat_data = abi.encodeWithSelector(bytes4(0x3593564c), 
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000060),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000000000a0),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000657d03bb),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000003),
-        bytes32(0x0b08000000000000000000000000000000000000000000000000000000000000),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000003),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000060),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000000000c0),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000000001e0),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000040),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000002),
-        bytes32(0x0000000000000000000000000000000000000000000000001bc16d674ec80000),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000100),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000001),
-        bytes32(0x00000000000000000000000000000000000000000000000017979cfe362a0000),
-        bytes32(0x0000000000000000000000000000000000000000000000000004e766db1648b3),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000000000a0),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000002),
-        bytes32(0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2),
-        bytes32(0x0000000000000000000000000590cc9232ebf68d81f6707a119898219342ecb9),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000100),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000001),
-        bytes32(0x0000000000000000000000000000000000000000000000000429d069189e0000),
-        bytes32(0x0000000000000000000000000000000000000000000000000000dfc868a4d812),
-        bytes32(0x00000000000000000000000000000000000000000000000000000000000000a0),
-        bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
-        bytes32(0x000000000000000000000000000000000000000000000000000000000000002b),
-        bytes32(0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20027100590cc9232ebf68d81),
-        bytes32(0xf6707a119898219342ecb9000000000000000000000000000000000000000000));
-        (s,) = to.call{value: 2 ether}(meat_data);
+        bytes memory meat_data = abi.encodeWithSelector(
+            bytes4(0x3593564c),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000060
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000000000a0
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000657d03bb
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000003
+            ),
+            bytes32(
+                0x0b08000000000000000000000000000000000000000000000000000000000000
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000003
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000060
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000000000c0
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000000001e0
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000040
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000002
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000001bc16d674ec80000
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000100
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000001
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000017979cfe362a0000
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000004e766db1648b3
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000000000a0
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000000
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000002
+            ),
+            bytes32(
+                0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
+            ),
+            bytes32(
+                0x0000000000000000000000000590cc9232ebf68d81f6707a119898219342ecb9
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000100
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000001
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000429d069189e0000
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000dfc868a4d812
+            ),
+            bytes32(
+                0x00000000000000000000000000000000000000000000000000000000000000a0
+            ),
+            bytes32(
+                0x0000000000000000000000000000000000000000000000000000000000000000
+            ),
+            bytes32(
+                0x000000000000000000000000000000000000000000000000000000000000002b
+            ),
+            bytes32(
+                0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20027100590cc9232ebf68d81
+            ),
+            bytes32(
+                0xf6707a119898219342ecb9000000000000000000000000000000000000000000
+            )
+        );
+        (s, ) = to.call{value: 2 ether}(meat_data);
         assertTrue(s, "calling meat data multimeat swap failed");
 
         bytes memory backrun_data = new bytes(236);
@@ -1076,7 +1154,7 @@ contract SandwichTest is Test {
             payload = abi.encodePacked(payload, subPayload);
             actualAmountIn = encodedAmountOut;
         }
-        uint8 end = 37;
+        uint8 end = 0x2e;
         payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         (bool s, ) = sandwich.call(payload);
