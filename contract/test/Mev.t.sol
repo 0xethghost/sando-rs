@@ -318,8 +318,8 @@ contract SandwichTest is Test {
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -359,8 +359,9 @@ contract SandwichTest is Test {
             payload = abi.encodePacked(payload, subPayload);
         }
         emit log_uint(callvalue);
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -383,6 +384,8 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
         emit log_bytes(payload);
         emit log_uint(encodedValue);
 
@@ -408,6 +411,9 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
 
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
@@ -435,6 +441,9 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
         emit log_bytes(payload);
 
         changePrank(searcher, searcher);
@@ -462,6 +471,8 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
         emit log_bytes(payload);
 
         changePrank(searcher, searcher);
@@ -489,6 +500,8 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
         emit log_bytes(payload);
 
         changePrank(searcher, searcher);
@@ -516,6 +529,8 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
 
         changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
@@ -541,6 +556,8 @@ contract SandwichTest is Test {
                 fee,
                 amountIn
             );
+        uint8 head = uint8(block.number);
+        payload = abi.encodePacked(head, payload);
 
         changePrank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: encodedValue}(payload);
@@ -580,8 +597,8 @@ contract SandwichTest is Test {
                 );
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
@@ -636,8 +653,8 @@ contract SandwichTest is Test {
                 );
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call(payload);
@@ -716,8 +733,8 @@ contract SandwichTest is Test {
             callvalue += encodedValue;
             payload = abi.encodePacked(payload, subPayload);
         }
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -809,8 +826,8 @@ contract SandwichTest is Test {
         }
 
         emit log_uint(callvalue);
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         vm.prank(searcher, searcher);
         (bool s, ) = address(sandwich).call{value: callvalue}(payload);
@@ -1059,8 +1076,8 @@ contract SandwichTest is Test {
             payload = abi.encodePacked(payload, subPayload);
             actualAmountIn = encodedAmountOut;
         }
-        uint8 endPayload = 37;
-        payload = abi.encodePacked(payload, endPayload);
+        uint8 end = 37;
+        payload = abi.encodePacked(payload, end);
         emit log_bytes(payload);
         (bool s, ) = sandwich.call(payload);
         assertTrue(s, "calling arbitrage failed");

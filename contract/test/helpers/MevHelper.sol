@@ -37,7 +37,7 @@ contract MevHelper {
             uint256 encodedByteShift,
             ,
 
-        ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 5);
+        ) = encodeNumToByteAndOffsetV3(uint256(amountOut), 4);
         console.log("Encoded amount out", encodedAmount);
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
 
@@ -46,7 +46,7 @@ contract MevHelper {
             uint8(swapType),
             address(pool),
             uint8(encodedByteShift * 8),
-            uint40(encodedAmount),
+            uint32(encodedAmount),
             pairInitHash
         );
         encodedValue = uint256(amountIn) / wethEncodeMultiple();
@@ -72,14 +72,14 @@ contract MevHelper {
         ) = encodeNumToByteAndOffsetV3(
                 (uint256(amountIn) / wethEncodeMultiple()) *
                     wethEncodeMultiple(),
-                5
+                4
             );
         uint8 swapType = _v3FindSwapType(false, false, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
             uint8(encodedByteShiftIn * 8),
-            uint40(encodedAmountIn),
+            uint32(encodedAmountIn),
             address(inputToken),
             pairInitHash
         );
