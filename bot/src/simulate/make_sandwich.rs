@@ -314,6 +314,7 @@ fn sanity_check(
             PoolVariant::UniswapV2 => {
                 if is_multiple {
                     sandwich_maker.v2.create_multi_payload_weth_is_input(
+                        block_number,
                         frontrun_in,
                         frontrun_out,
                         ingredients.intermediary_token,
@@ -322,6 +323,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v2.create_payload_weth_is_input(
+                        block_number,
                         frontrun_in,
                         frontrun_out,
                         ingredients.intermediary_token,
@@ -332,6 +334,7 @@ fn sanity_check(
             PoolVariant::UniswapV3 => {
                 if is_multiple {
                     sandwich_maker.v3.create_multi_payload_weth_is_input(
+                        block_number,
                         frontrun_in.as_u128().into(),
                         frontrun_out.as_u128().into(),
                         ingredients.startend_token,
@@ -341,6 +344,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v3.create_payload_weth_is_input(
+                        block_number,
                         frontrun_in.as_u128().into(),
                         frontrun_out.as_u128().into(),
                         ingredients.startend_token,
@@ -488,6 +492,7 @@ fn sanity_check(
             PoolVariant::UniswapV2 => {
                 if is_multiple {
                     sandwich_maker.v2.create_multi_payload_weth_is_output(
+                        block_number,
                         backrun_in,
                         backrun_out,
                         ingredients.intermediary_token,
@@ -496,6 +501,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v2.create_payload_weth_is_output(
+                        block_number,
                         backrun_in,
                         backrun_out,
                         ingredients.intermediary_token,
@@ -506,6 +512,7 @@ fn sanity_check(
             PoolVariant::UniswapV3 => {
                 if is_multiple {
                     sandwich_maker.v3.create_multi_payload_weth_is_output(
+                        block_number,
                         backrun_in.as_u128().into(),
                         backrun_out.as_u128().into(),
                         ingredients.intermediary_token,
@@ -515,6 +522,7 @@ fn sanity_check(
                     )
                 } else {
                     sandwich_maker.v3.create_payload_weth_is_output(
+                        block_number,
                         backrun_in.as_u128().into(),
                         backrun_out.as_u128().into(),
                         ingredients.intermediary_token,
