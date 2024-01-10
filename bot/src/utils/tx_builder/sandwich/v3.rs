@@ -1,5 +1,5 @@
-use crate::{prelude::Pool, utils};
 use crate::utils::constants::get_prepare_stack_payload;
+use crate::{prelude::Pool, utils};
 
 use super::*;
 
@@ -23,8 +23,8 @@ impl SandwichLogicV3 {
             "v3_output0_multi",
             "v3_output1_multi",
         ];
-        let start_offset_single = 54;
-        let start_offset_multi = 99;
+        let start_offset_single = 63;
+        let start_offset_multi = 108;
 
         for x in 0..jump_label_names_single.len() {
             jump_labels.insert(
@@ -46,6 +46,7 @@ impl SandwichLogicV3 {
     // Handles creation of tx data field when weth is input
     pub fn create_payload_weth_is_input(
         &self,
+        block_number: U64,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -63,6 +64,7 @@ impl SandwichLogicV3 {
             encode_num_bytes(U256::from(amount_out.as_u128()), 5);
 
         let (payload, _) = utils::encode_packed(&[
+            utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
             utils::PackedToken::NumberWithShift(
@@ -84,6 +86,7 @@ impl SandwichLogicV3 {
     // Handles creation of tx data field when weth is output
     pub fn create_payload_weth_is_output(
         &self,
+        block_number: U64,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -101,6 +104,7 @@ impl SandwichLogicV3 {
 
         // use small encoding method (encode amount_in to 6 bytes)
         let (payload, _) = utils::encode_packed(&vec![
+            utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
             utils::PackedToken::NumberWithShift(swap_type, utils::TakeLastXBytes(8)),
             utils::PackedToken::Address(pool.address),
             utils::PackedToken::NumberWithShift(
@@ -121,6 +125,7 @@ impl SandwichLogicV3 {
 
     pub fn create_multi_payload_weth_is_input(
         &self,
+        block_number: U64,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -164,6 +169,7 @@ impl SandwichLogicV3 {
         ]);
         let (payload, _) = if is_first {
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     U256::from(prepare_stack_sig),
                     utils::TakeLastXBytes(8),
@@ -171,14 +177,19 @@ impl SandwichLogicV3 {
                 utils::PackedToken::Bytes(&payload_data),
             ])
         } else {
-            (payload_data, str_payload)
+            utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
+                utils::PackedToken::Bytes(&payload_data),
+            ])
         };
+
         // let encoded_call_value = U256::from(amount_in.as_u128()) / get_weth_encode_divisor();
 
         (payload, U256::zero())
     }
     pub fn create_multi_payload_weth_is_output(
         &self,
+        block_number: U64,
         amount_in: I256,
         amount_out: I256,
         input: Address,
@@ -223,6 +234,7 @@ impl SandwichLogicV3 {
         ]);
         let (payload, _) = if is_first {
             utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
                 utils::PackedToken::NumberWithShift(
                     U256::from(prepare_stack_sig),
                     utils::TakeLastXBytes(8),
@@ -230,7 +242,10 @@ impl SandwichLogicV3 {
                 utils::PackedToken::Bytes(&payload_data),
             ])
         } else {
-            (payload_data, str_payload)
+            utils::encode_packed(&[
+                utils::PackedToken::NumberWithShift(block_number, utils::TakeLastXBytes(8)),
+                utils::PackedToken::Bytes(&payload_data),
+            ])
         };
         // let encoded_call_value = U256::from(amount_in.as_u128()) / get_weth_encode_divisor();
 
