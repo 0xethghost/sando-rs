@@ -1,4 +1,4 @@
-# Rusty-Sando/Bot ![license](https://img.shields.io/badge/License-MIT-green.svg?label=license)
+# sando-rs/bot ![license](https://img.shields.io/badge/License-MIT-green.svg?label=license)
 
 Bot logic relies heavily on REVM simulations to detect sandwichable transactions. The simulations are done by injecting a modified router contract called [`BrainDance.sol`](https://github.com/mouseless-eth/rusty-sando/blob/master/contract/src/BrainDance.sol) into a new EVM instance. Once injected, a concurrent binary search is performed to find a optimal input amount that results in the highest revenue. After sandwich calculations, the bot performs a [salmonella](https://github.com/Defi-Cartel/salmonella) check. If the sandwich is salmonella free, the bot then calculates gas bribes and sends bundle. 
 
@@ -36,13 +36,10 @@ RPC_URL_WSS=ws://localhost:8545
 SEARCHER_PRIVATE_KEY=0000000000000000000000000000000000000000000000000000000000000001
 FLASHBOTS_AUTH_KEY=0000000000000000000000000000000000000000000000000000000000000002
 SANDWICH_CONTRACT=0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa
-V2_ALERT_DISCORD_WEBHOOK=...
-V3_ALERT_DISCORD_WEBHOOK=...
-POISON_ALERT_DISCORD_WEBHOOK=...
 SANDWICH_INCEPTION_BLOCK=... // block that sandwich contract was deployed in
 ```
 
-5. Before running backtests get the runtime bytecode of the contract and set it to [`get_test_sandwich_code`](https://github.com/mouseless-eth/rusty-sando/blob/5ddeb4bbf703420de3cd5bc2b0d6885fce4cb0a4/bot/src/utils/constants.rs#L26) in constants.rs.
+5. Before running backtests get the runtime bytecode of the contract and set it to [`get_test_sandwich_code`] in constants.rs.
 
 ```console
 huffc --bin-runtime contract/src/sandwich.huff
@@ -61,10 +58,6 @@ cargo run --bin rusty-sando --release
 ```
 > **Note**
 > with the `--release` flag, the rust compiler will compile with optimizations. These optimizations are important because they speed up REVM simulations 10x. 
->
-> **Warning**
->
-> **By taking this codebase into production, you are doing so at your own risk under the MIT license.** Although heavily tested, I cannot gurantee that it is bug free. I prefer this codebase to be used as a case study of what MEV could look like using Rust and Huff. 
 
 ### Blueprint
 

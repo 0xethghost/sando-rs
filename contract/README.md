@@ -1,4 +1,4 @@
-# Rusty-Sando/Contract ![license](https://img.shields.io/badge/License-MIT-green.svg?label=license)
+# sando-rs/contract ![license](https://img.shields.io/badge/License-MIT-green.svg?label=license)
 
 Gas optimized sando contract written in Huff to make use unconventional gas optimizations. 
 
@@ -12,16 +12,16 @@ Instead of reserving 4 bytes for a function selector, store a JUMPDEST in the fi
 Example:
 ```as
 #define macro MAIN() = takes (0) returns (0) {
-    // extract function selector (JUMPDEST encoding)
-    returndatasize                              // [0x00]
-    calldataload                                // [calldata]
-    returndatasize                              // [0x00, calldata]
-    byte                                        // [jumplabel]
-    jump                                        // []
+    ...
+    entry_point
+    jumpi
+    ...
+    
+    entry_point:
+        chainid
+        byte
+        jump
 ```
-
-> **Note**
-> JUMPDEST 0xfa is reserved to handle [UniswapV3 callback](https://docs.uniswap.org/contracts/v3/reference/core/interfaces/callback/IUniswapV3SwapCallback).
 
 ### Encoding WETH Value Using tx.value
 When dealing with WETH amounts, the amount is encoded by first dividing the value by 0x100000000, and setting the divided value as `tx.value` when calling the contract. The contract then multiplies `tx.value` by 0x100000000 to get the original amount. 
@@ -32,9 +32,6 @@ When dealing with the other token amount, the values can range significantlly de
 We use byteshifts instead of bitshifts because we perform a byteshift by storing the 4bytes in memory N bytes to the left of its memory slot. 
 
 However, instead of encoding the byteshift into our calldata, we encode the offset in memory such that when the 4bytes are stored, it will be N bytes from the left of its storage slot.
-
-> **Note** 
-> Free alfa: Might be able to optimize contract by eliminating unnecessary [memory expansions](https://www.evm.codes/about#memoryexpansion) by changing order that params are stored in memory. I did not account for this when writing the contract. 
 
 ### Hardcoded values
 Weth address is hardcoded into the contract and there are individual methods to handle when Weth is token0 or token1. 
