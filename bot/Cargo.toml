@@ -1,14 +1,14 @@
 [package]
-name = "rusty-sando"
+name = "sando-rs"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Optimized mev bot written using Rust and Huff"
 readme = "README.md"
-homepage = "https://github.com/sipovalovdmitro/rusty-sando"
-repository = "https://github.com/sipovalovdmitro/rusty-sando"
+homepage = "https://github.com/0xethghost/sando-rs"
+repository = "https://github.com/0xethghost/sando-rs"
 keywords = ["Ethereum", "Mev", "Dex", "Sandwich"]
-authors = ["sipovalovdmitro <https://github.com/sipovalovdmitro>"]
+authors = ["0xethghost <https://github.com/0xethghost>"]
 
 [dependencies]
 ethers-flashbots = { git = "https://github.com/onbjerg/ethers-flashbots" }

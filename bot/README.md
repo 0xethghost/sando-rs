@@ -54,7 +54,7 @@ cargo test --release -- --nocapture
 6. Create a binary executable
 
 ```
-cargo run --bin rusty-sando --release
+cargo run --bin sando-rs --release
 ```
 > **Note**
 > with the `--release` flag, the rust compiler will compile with optimizations. These optimizations are important because they speed up REVM simulations 10x. 
