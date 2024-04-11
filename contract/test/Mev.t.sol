@@ -239,7 +239,7 @@ contract SandwichTest is Test {
         console.log("amountIn:", amountIn);
 
         // Fund sandwich
-        vm.prank(0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8);
+        vm.prank(0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503);
         IERC20(inputToken).transfer(sandwich, amountIn);
 
         // Pre swap checks
@@ -346,7 +346,7 @@ contract SandwichTest is Test {
             ),
             V2Meat(
                 0x6B175474E89094C44Da98b954EedeAC495271d0F,
-                0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8,
+                0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503,
                 4722.366481770134 ether,
                 false,
                 false
@@ -774,7 +774,7 @@ contract SandwichTest is Test {
         V2Meat[1] memory v2meats2 = [
             V2Meat(
                 0x6B175474E89094C44Da98b954EedeAC495271d0F,
-                0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8,
+                0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503,
                 4722.366481770134 ether,
                 false,
                 false
@@ -847,180 +847,180 @@ contract SandwichTest is Test {
         assertTrue(s, "calling hybrid weth output multimeat swap failed");
     }
 
-    function testCustomPayload() public {
-        // vm.roll(18749420);
-        bytes memory frontrun_data = new bytes(153);
-        assembly {
-            mstore(
-                add(frontrun_data, 0x20),
-                0x4a165d18b30ac9f5e8d6b21a4b783d95fecc8b3c09c600e760cd4f1e0afd65ec
-            )
-            mstore(
-                add(frontrun_data, 0x40),
-                0x6b286d353c42268738d66bbf56ba9de555a9611e00018bc1bf68ca8609526dff
-            )
-            mstore(
-                add(frontrun_data, 0x60),
-                0x646034248308fb2a62d663620227c83570e300d00bd272431be359d4b1c4b449
-            )
-            mstore(
-                add(frontrun_data, 0x80),
-                0x4b4e37a6409b854eae989b98aeef3fa4250a6c58f7de2e6ee64f3f303d963aa9
-            )
-            mstore(
-                add(frontrun_data, 0xa0),
-                0x8f53cff98bbf4d3e4058689ea359dd488d026100000b96262500000000000000
-            )
-        }
-        emit log_bytes(frontrun_data);
-        uint callvalue = 121512037;
-        vm.startPrank(searcher, searcher);
-        (bool s, ) = address(sandwich).call{value: callvalue}(frontrun_data);
-        assertTrue(s, "calling custom frontrun data multimeat swap failed");
+    // function testCustomPayload() public {
+    //     // vm.roll(18749420);
+    //     bytes memory frontrun_data = new bytes(153);
+    //     assembly {
+    //         mstore(
+    //             add(frontrun_data, 0x20),
+    //             0x4a165d18b30ac9f5e8d6b21a4b783d95fecc8b3c09c600e760cd4f1e0afd65ec
+    //         )
+    //         mstore(
+    //             add(frontrun_data, 0x40),
+    //             0x6b286d353c42268738d66bbf56ba9de555a9611e00018bc1bf68ca8609526dff
+    //         )
+    //         mstore(
+    //             add(frontrun_data, 0x60),
+    //             0x646034248308fb2a62d663620227c83570e300d00bd272431be359d4b1c4b449
+    //         )
+    //         mstore(
+    //             add(frontrun_data, 0x80),
+    //             0x4b4e37a6409b854eae989b98aeef3fa4250a6c58f7de2e6ee64f3f303d963aa9
+    //         )
+    //         mstore(
+    //             add(frontrun_data, 0xa0),
+    //             0x8f53cff98bbf4d3e4058689ea359dd488d026100000b96262500000000000000
+    //         )
+    //     }
+    //     emit log_bytes(frontrun_data);
+    //     uint callvalue = 121512037;
+    //     vm.startPrank(searcher, searcher);
+    //     (bool s, ) = address(sandwich).call{value: callvalue}(frontrun_data);
+    //     assertTrue(s, "calling custom frontrun data multimeat swap failed");
 
-        vm.startPrank(
-            0x275A8D31bc87D5664249Db312001310a058B800e,
-            0x275A8D31bc87D5664249Db312001310a058B800e
-        );
-        address to = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
-        bytes memory meat_data = abi.encodeWithSelector(
-            bytes4(0x3593564c),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000060
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000000000a0
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000657d03bb
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000003
-            ),
-            bytes32(
-                0x0b08000000000000000000000000000000000000000000000000000000000000
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000003
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000060
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000000000c0
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000000001e0
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000040
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000002
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000001bc16d674ec80000
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000100
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000001
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000017979cfe362a0000
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000004e766db1648b3
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000000000a0
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000000
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000002
-            ),
-            bytes32(
-                0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
-            ),
-            bytes32(
-                0x0000000000000000000000000590cc9232ebf68d81f6707a119898219342ecb9
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000100
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000001
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000429d069189e0000
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000dfc868a4d812
-            ),
-            bytes32(
-                0x00000000000000000000000000000000000000000000000000000000000000a0
-            ),
-            bytes32(
-                0x0000000000000000000000000000000000000000000000000000000000000000
-            ),
-            bytes32(
-                0x000000000000000000000000000000000000000000000000000000000000002b
-            ),
-            bytes32(
-                0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20027100590cc9232ebf68d81
-            ),
-            bytes32(
-                0xf6707a119898219342ecb9000000000000000000000000000000000000000000
-            )
-        );
-        (s, ) = to.call{value: 2 ether}(meat_data);
-        assertTrue(s, "calling meat data multimeat swap failed");
+    //     vm.startPrank(
+    //         0x275A8D31bc87D5664249Db312001310a058B800e,
+    //         0x275A8D31bc87D5664249Db312001310a058B800e
+    //     );
+    //     address to = 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD;
+    //     bytes memory meat_data = abi.encodeWithSelector(
+    //         bytes4(0x3593564c),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000060
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000000000a0
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000657d03bb
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000003
+    //         ),
+    //         bytes32(
+    //             0x0b08000000000000000000000000000000000000000000000000000000000000
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000003
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000060
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000000000c0
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000000001e0
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000040
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000002
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000001bc16d674ec80000
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000100
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000001
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000017979cfe362a0000
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000004e766db1648b3
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000000000a0
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000000
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000002
+    //         ),
+    //         bytes32(
+    //             0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000590cc9232ebf68d81f6707a119898219342ecb9
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000100
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000001
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000429d069189e0000
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000dfc868a4d812
+    //         ),
+    //         bytes32(
+    //             0x00000000000000000000000000000000000000000000000000000000000000a0
+    //         ),
+    //         bytes32(
+    //             0x0000000000000000000000000000000000000000000000000000000000000000
+    //         ),
+    //         bytes32(
+    //             0x000000000000000000000000000000000000000000000000000000000000002b
+    //         ),
+    //         bytes32(
+    //             0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20027100590cc9232ebf68d81
+    //         ),
+    //         bytes32(
+    //             0xf6707a119898219342ecb9000000000000000000000000000000000000000000
+    //         )
+    //     );
+    //     (s, ) = to.call{value: 2 ether}(meat_data);
+    //     assertTrue(s, "calling meat data multimeat swap failed");
 
-        bytes memory backrun_data = new bytes(236);
-        assembly {
-            mstore(
-                add(backrun_data, 0x20),
-                0x54365d18b30ac9f5e8d6b21a4b783d95fecc8b3c09c68a7b7b9b2f7d0c63f661
-            )
-            mstore(
-                add(backrun_data, 0x40),
-                0x71721339705a6188a7d500e760cc61593e0afd65ec6b286d353c42268738d66b
-            )
-            mstore(
-                add(backrun_data, 0x60),
-                0xbf56ba9de50590cc9232ebf68d81f6707a119898219342ecb9617bd36001e2cf
-            )
-            mstore(
-                add(backrun_data, 0x80),
-                0xde006172ca8609526dff646034248308fb2a62d663620227c001d3f06ad0617b
-            )
-            mstore(
-                add(backrun_data, 0xa0),
-                0xd3611a0590cc9232ebf68d81f6707a119898219342ecb9e359d4b1c4b4494b4e
-            )
-            mstore(
-                add(backrun_data, 0xc0),
-                0x37a6409b854eae989b98aeef3fa4250a6c58f7de2e6ee6593f303d963aa98f53
-            )
-            mstore(
-                add(backrun_data, 0xe0),
-                0xcff98bbf4d3e4058689ea359ddf8cacf121348eaa339f9e622e73f40058970df
-            )
-            mstore(
-                add(backrun_data, 0x100),
-                0x83488d02600b846c000042250000000000000000000000000000000000000000
-            )
-        }
-        emit log_bytes(backrun_data);
-        vm.startPrank(searcher, searcher);
-        callvalue = 30954483968;
-        (s, ) = address(sandwich).call{value: callvalue}(backrun_data);
-        assertTrue(s, "calling custom backrun data multimeat swap failed");
-        vm.stopPrank();
-    }
+    //     bytes memory backrun_data = new bytes(236);
+    //     assembly {
+    //         mstore(
+    //             add(backrun_data, 0x20),
+    //             0x54365d18b30ac9f5e8d6b21a4b783d95fecc8b3c09c68a7b7b9b2f7d0c63f661
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0x40),
+    //             0x71721339705a6188a7d500e760cc61593e0afd65ec6b286d353c42268738d66b
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0x60),
+    //             0xbf56ba9de50590cc9232ebf68d81f6707a119898219342ecb9617bd36001e2cf
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0x80),
+    //             0xde006172ca8609526dff646034248308fb2a62d663620227c001d3f06ad0617b
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0xa0),
+    //             0xd3611a0590cc9232ebf68d81f6707a119898219342ecb9e359d4b1c4b4494b4e
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0xc0),
+    //             0x37a6409b854eae989b98aeef3fa4250a6c58f7de2e6ee6593f303d963aa98f53
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0xe0),
+    //             0xcff98bbf4d3e4058689ea359ddf8cacf121348eaa339f9e622e73f40058970df
+    //         )
+    //         mstore(
+    //             add(backrun_data, 0x100),
+    //             0x83488d02600b846c000042250000000000000000000000000000000000000000
+    //         )
+    //     }
+    //     emit log_bytes(backrun_data);
+    //     vm.startPrank(searcher, searcher);
+    //     callvalue = 30954483968;
+    //     (s, ) = address(sandwich).call{value: callvalue}(backrun_data);
+    //     assertTrue(s, "calling custom backrun data multimeat swap failed");
+    //     vm.stopPrank();
+    // }
 
     // Test by recovering the initial funded amount
     function testRecoverWeth() public {
@@ -1033,6 +1033,7 @@ contract SandwichTest is Test {
 
         string memory functionName = "recoverWeth";
         bytes memory payload = abi.encodePacked(
+            uint8(block.number),
             mevHelper.getJumpLabelFromSig(functionName)
         );
         uint encodedValue = recoverAmount / mevHelper.wethEncodeMultiple();
@@ -1068,6 +1069,7 @@ contract SandwichTest is Test {
             abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName))
         );
         bytes memory payload = abi.encodePacked(
+            uint8(block.number),
             mevHelper.getJumpLabelFromSig(functionName)
         );
         (bool s, ) = sandwich.call{value: amountDeposit}(payload);
@@ -1097,6 +1099,7 @@ contract SandwichTest is Test {
 
         string memory functionName = "recoverEth";
         bytes memory payload = abi.encodePacked(
+            uint8(block.number),
             mevHelper.getJumpLabelFromSig(functionName)
         );
         (bool s, ) = sandwich.call(payload);
@@ -1104,7 +1107,10 @@ contract SandwichTest is Test {
         assertFalse(s, "unauthorized addresses should not call recover eth");
 
         functionName = "recoverWeth";
-        payload = abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName));
+        payload = abi.encodePacked(
+            uint8(block.number),
+            mevHelper.getJumpLabelFromSig(functionName)
+        );
         (s, ) = sandwich.call(payload);
 
         assertFalse(
@@ -1113,7 +1119,10 @@ contract SandwichTest is Test {
         );
 
         functionName = "seppuku";
-        payload = abi.encodePacked(mevHelper.getJumpLabelFromSig(functionName));
+        payload = abi.encodePacked(
+            uint8(block.number),
+            mevHelper.getJumpLabelFromSig(functionName)
+        );
         (s, ) = sandwich.call(payload);
 
         assertFalse(

@@ -1,4 +1,4 @@
-# Rusty-Sando !  
+# Sando-RS !  
 A practical MEV bot on how to perform V2/V3 and multi-meat sandwich attacks written using Rust and Huff.
 
 ## Brief Explanation
@@ -14,9 +14,9 @@ Anytime that a transaction interacts with a Uniswap V2/V3 pool and their forks, 
 - **Salmonella Checks**: Detect if tx uses unusual opcodes that may produce different mainnet results.
 - **Discord Logging**: Send notifications via discord webhooks.
 
-**Bot Logic Breakdown** can be found under [bot/README.md](https://github.com/sipovalovdmitro/rusty-sando/tree/main/bot)
+**Bot Logic Breakdown** can be found under [bot/README.md](https://github.com/0xethghost/sando-rs/tree/main/bot)
 
-**Contract Logic Breakdown** can be found under [contract/README.md](https://github.com/sipovalovdmitro/rusty-sando/tree/main/contract)
+**Contract Logic Breakdown** can be found under [contract/README.md](https://github.com/0xethghost/sando-rs/tree/main/contract)
 
 ## Acknowledgments
 - [subway](https://github.com/libevm/subway)

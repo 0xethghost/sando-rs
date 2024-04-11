@@ -8,7 +8,7 @@ use eyre::Result;
 
 use fern::colors::{Color, ColoredLevelConfig};
 
-use rusty_sando::{
+use sando_rs::{
     prelude::{sync_dex, AllPoolsInfo, Dex, Pool, PoolVariant},
     runner::Bot,
     utils::{self, dotenv::read_env_vars},
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
         .chain(fern::log_file("output.log")?)
         // hide all logs for everything other than bot
         .level(log::LevelFilter::Error)
-        .level_for("rusty_sando", log::LevelFilter::Info)
+        .level_for("sando_rs", log::LevelFilter::Info)
         .apply()?;
 
     read_env_vars();
@@ -203,7 +203,7 @@ async fn main() -> Result<()> {
 //mod test {
 //    use ethers::providers::Middleware;
 //    use futures::StreamExt;
-//    use rusty_sando::utils::testhelper;
+//    use sando_rs::utils::testhelper;
 //
 //    #[tokio::test]
 //    async fn sub_blocks() {

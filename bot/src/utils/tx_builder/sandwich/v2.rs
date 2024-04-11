@@ -46,7 +46,7 @@ impl SandwichLogicV2 {
 
     pub fn create_payload_weth_is_input(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
@@ -80,7 +80,7 @@ impl SandwichLogicV2 {
 
     pub fn create_payload_weth_is_output(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: U256,      // backrun_in
         amount_out: U256,     // backrun_out
         other_token: Address, // input_token
@@ -118,7 +118,7 @@ impl SandwichLogicV2 {
 
     pub fn create_multi_payload_weth_is_input(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
@@ -171,7 +171,7 @@ impl SandwichLogicV2 {
 
     pub fn create_multi_payload_weth_is_output(
         &self,
-        block_number: U64,
+        block_number: U256,
         amount_in: U256,
         amount_out: U256,
         other_token: Address, // output token
