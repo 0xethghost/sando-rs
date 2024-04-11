@@ -62,37 +62,34 @@ contract MevHelper {
         (address token0, address token1) = inputToken < outputToken
             ? (inputToken, outputToken)
             : (outputToken, inputToken);
-        // uint amountInActual = (uint256(amountIn) / wethEncodeMultiple()) * wethEncodeMultiple();
         bytes32 pairInitHash = keccak256(abi.encode(token0, token1, fee));
         (
             uint256 encodedAmountIn,
             uint256 encodedByteShiftIn,
-            ,
+            uint256 actualAmountIn,
 
         ) = encodeNumToByteAndOffsetV3(
-                (uint256(amountIn) / wethEncodeMultiple()) *
-                    wethEncodeMultiple(),
-                4
+                uint256(amountIn),
+                5
             );
+        console.log(actualAmountIn);
         uint8 swapType = _v3FindSwapType(false, false, inputToken, outputToken);
         payload = abi.encodePacked(
             uint8(swapType),
             address(pool),
             uint8(encodedByteShiftIn * 8),
-            uint32(encodedAmountIn),
+            uint40(encodedAmountIn),
             address(inputToken),
             pairInitHash
         );
         uint256 amountOut = GeneralHelper.getAmountOutV3(
-            uint256(
-                (uint256(amountIn) / wethEncodeMultiple()) *
-                    wethEncodeMultiple()
-            ),
+            actualAmountIn,
             inputToken,
             outputToken,
             fee
         );
         encodedValue = amountOut / wethEncodeMultiple();
+        console.log((amountOut / wethEncodeMultiple())*wethEncodeMultiple());
     }
 
     function v3CreateSandwichMultiMeatPayloadWethIsInput(
