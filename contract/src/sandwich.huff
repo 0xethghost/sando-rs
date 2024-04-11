@@ -672,7 +672,7 @@
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
         0x00                              // [argoffset, argsize, retoffset, retsize]
         0x00                              // [value, argoffset, argsize, retoffset, retsize]
-        chainid calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
+        0x02 calldataload 0x60 shr                  // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         
@@ -697,7 +697,7 @@
         address 0x04 mstore                         // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(4, address(this))
         //0x00 0x24 mstore                          // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(36, false)
         0x17 calldataload
-        0xffffffff00000000000000000000000000000000000000000000000000000000
+        0xffffffffff000000000000000000000000000000000000000000000000000000
         and
         0x16 calldataload 0x00 byte 
         shr
@@ -707,9 +707,9 @@
         0xa0 0x84 mstore // 100                     // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(132, 0x80) *dynamic byte offset
         0x35 0xa4 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(164, 0x02) *dynamic byte length
         // ** abi.encodePacked(isZeroForOne, input_token, pool_key_hash)
-        0x1b calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x1c calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
         0xc4 mstore                                 // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(196, isZeroForOne_&_InputTokenAddr)
-        0x2F calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
+        0x30 calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
 
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
@@ -745,9 +745,9 @@
         0x35 0xa4 mstore                            // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(164, 0x02) *dynamic byte length
         // ** abi.encodePacked(isZeroForOne, input_token, pool_key_hash)
         0x0100000000000000000000000000000000000000000000000000000000000000
-        0x1b calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
+        0x1c calldataload 0x60 shr 0x58 shl         // [input_token, pair_address, value, argoffset, argsize, retoffset, retsize]
         add 0xc4 mstore                             // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(196, isZeroForOne_&_InputTokenAddr)
-        0x2F calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
+        0x30 calldataload 0xd9 mstore               // [pair_address, value, argoffset, argsize, retoffset, retsize] - mstore(217, pool_key_hash)
 
         // call pool.swap
         // ***Preset the stack for when we call pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data)
@@ -756,15 +756,15 @@
         0xf9   // 249 (4+32+32+32+32+{32+32+53})    // [argsize, retoffset, retsize]
         0x00                              // [argoffset, argsize, retoffset, retsize]
         0x00                              // [value, argoffset, argsize, retoffset, retsize]
-        chainid calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
+        0x02 calldataload 0x60 shr               // [pair_address, value, argoffset, argsize, retoffset, retsize] = pair_swap_args
         gas                                         // [gas, pair_address, value, argoffset, argsize, retoffset, retsize]
         call
         0x00
         mload
-        0x16 calldataload
+        0x17 calldataload
         0xffffffffff000000000000000000000000000000000000000000000000000000
         and
-        0x15 calldataload 0x00 byte 
+        0x16 calldataload 0x00 byte 
         shr
         gt
         and
@@ -1151,7 +1151,7 @@
         // make deposit call
         0x00
         0x00
-        0x4
+        0x04
         0x00
         callvalue
         [WETH]
