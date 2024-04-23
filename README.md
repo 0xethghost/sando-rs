@@ -12,7 +12,6 @@ Anytime that a transaction interacts with a Uniswap V2/V3 pool and their forks, 
 - **Local Simulations**: Fast concurrent EVM simulations to find sandwich opportunities. 
 - **Token Dust**: Stores dust at the end of every bundle for lower gas usage next time token is traded. 
 - **Salmonella Checks**: Detect if tx uses unusual opcodes that may produce different mainnet results.
-- **Discord Logging**: Send notifications via discord webhooks.
 
 **Bot Logic Breakdown** can be found under [bot/README.md](https://github.com/0xethghost/sando-rs/tree/main/bot)
 

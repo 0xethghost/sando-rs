@@ -31,7 +31,7 @@ contract Deposit is Script {
     }
 
     function setupSigJumpLabelMapping() private {
-        uint256 startingIndex = 0x27;
+        uint256 startingIndex = 0x30;
 
         string[22] memory functionNames = [
             "v2_input_single",
