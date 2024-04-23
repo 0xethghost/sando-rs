@@ -14,7 +14,8 @@ contract Seppuku is Script {
 
     function run() public{
         uint8 seppukuLabel = getJumpLabelFromSig("seppuku");
-        bytes memory payload = abi.encodePacked(seppukuLabel);
+        uint8 head = uint8(block.number);
+        bytes memory payload = abi.encodePacked(head, seppukuLabel);
         uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
         vm.broadcast(searcherPrivateKey);
         (bool result,) = sandwich.call(payload);

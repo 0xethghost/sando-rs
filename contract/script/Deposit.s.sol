@@ -15,7 +15,8 @@ contract Deposit is Script {
 
     function run() public {
         uint8 depositLabel = getJumpLabelFromSig("depositWeth");
-        bytes memory payload = abi.encodePacked(depositLabel);
+        uint8 head = uint8(block.number);
+        bytes memory payload = abi.encodePacked(head, depositLabel);
         uint amountDeposit = 4 ether;
         uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
         vm.broadcast(searcherPrivateKey);

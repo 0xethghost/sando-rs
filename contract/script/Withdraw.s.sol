@@ -16,9 +16,10 @@ contract Withdraw is Script {
 
     function run() public {
         uint8 withdrawLabel = getJumpLabelFromSig("recoverWeth");
+        uint8 head = uint8(block.number);
         uint amountWithdraw = 4.041820827974101895 ether;
         uint callvalue = amountWithdraw / wethEncodeMultiple();
-        bytes memory payload = abi.encodePacked(withdrawLabel);
+        bytes memory payload = abi.encodePacked(head, withdrawLabel);
         console.logBytes(payload);
         uint256 searcherPrivateKey = vm.envUint("SEARCHER_PRIVATE_KEY");
         vm.broadcast(searcherPrivateKey);
