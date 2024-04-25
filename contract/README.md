@@ -37,12 +37,28 @@ However, instead of encoding the byteshift into our calldata, we encode the offs
 Weth address is hardcoded into the contract and there are individual methods to handle when Weth is token0 or token1. 
 
 ### Encode Packed
-All calldata is encoded by packing the values together. 
+All calldata is encoded by packing the values together.  
+
+### Environment variables
+Copy `.env.example` into `.env` and fill out values.  
+
+```console
+cp .env.example .env
+```
+
+```
+HTTP_RPC_URL= // Mainnet JSON-RPC url. example: https://mainnet.infura.io/v3/<YOUR_INFURA_API_KEY>
+PRIVATE_KEY= // Deployer private key(only for the deployment)
+SEARCHER_PRIVATE_KEY= // Searcher(Attacker) private key to be used to interact with the deployed sandwich contract
+SEARCHER=0x... // Searcher(Attacker) address
+```
+
 
 ## Tests
 
 ```console
-forge test --rpc-url <your-rpc-url-here>
+source .env
+forge test --match-path test/Mev.t.sol --rpc-url $HTTP_RPC_URL -vvv
 ```
 
 ## Deployment
