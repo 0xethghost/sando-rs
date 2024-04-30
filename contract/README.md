@@ -53,6 +53,25 @@ SEARCHER_PRIVATE_KEY= // Searcher(Attacker) private key to be used to interact w
 SEARCHER=0x... // Searcher(Attacker) address
 ```
 
+### Blueprint
+
+```
+contract
+├── interfaces - contract interfaces for contract deployment and tests
+├── script
+│   ├── Deploy.s.sol - Deployment script for sandwich.huff contract to the predetermined address
+│   ├── Deposit.s.sol - ETH deposit script that transfers ETH from the searcher wallet into the sandwich contract in WETH
+│   ├── Seppuku.s.sol - Script that destructs the sandwich contract code from the contract address to deploy a new code
+│   └── Withdraw.s.sol - Withdraw WETH from the sandwich contract to the searcher wallet in ETH
+├── src
+│   └── lib
+│       └── ...
+│   ├── BrainDance.sol - contract used to simulate sandwich contract output in local
+│   └── sandwich.huff- production sandwich contract written with Huff
+└── test
+    ├── ...
+    └── Mev.t.sol - test sandwich.huff contract in local
+```
 
 ## Tests
 
