@@ -1,5 +1,4 @@
 bot/target
-**/.env
 contract/out
 contract/cache
 .env
